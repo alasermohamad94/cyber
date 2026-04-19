@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+
+{% block title %}Threat Management - Cyber Defense System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-danger text-white">
+                <div class="card-body py-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h4 class="mb-0"><i class="fas fa-shield-virus"></i> Threat Management</h4>
+                            <p class="mb-0">Monitor and respond to security threats</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button class="btn btn-light" onclick="scanForThreats()">
+                                <i class="fas fa-radar"></i> Scan Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Threat Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                    <h5 class="card-title">Active Threats</h5>
+                    <div class="metric-value" id="activeThreats">3</div>
+                    <small class="text-muted">Requiring attention</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-ban fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title">Blocked IPs</h5>
+                    <div class="metric-value" id="blockedIPs">47</div>
+                    <small class="text-muted">Currently blocked</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-shield fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Isolated Systems</h5>
+                    <div class="metric-value" id="isolatedSystems">2</div>
+                    <small class="text-muted">Under quarantine</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-double fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">Resolved Today</h5>
+                    <div class="metric-value" id="resolvedToday">12</div>
+                    <small class="text-muted">Successfully mitigated</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="row">
+        <!-- Active Threats -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-fire"></i> Active Threats</h5>
+                    <button class="btn btn-sm btn-outline-light" onclick="refreshThreats()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                    <div id="activeThreatsList">
+                        <!-- High Risk Threat -->
+                        <div class="threat-item high-risk mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                                        Suspicious Login Activity
+                                    </h6>
+                                    <p class="mb-1">Multiple failed login attempts detected from IP 192.168.1.105</p>
+                                    <div class="small text-muted">
+                                        <i class="fas fa-clock"></i> 5 minutes ago
+                                        <span class="ms-3"><i class="fas fa-globe"></i> 192.168.1.105</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-danger">HIGH</span>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-warning me-1" onclick="respondToThreat('block', '192.168.1.105')">
+                                            <i class="fas fa-ban"></i> Block
+                                        </button>
+                                        <button class="btn btn-sm btn-info" onclick="investigateThreat('login-activity')">
+                                            <i class="fas fa-search"></i> Investigate
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Medium Risk Threat -->
+                        <div class="threat-item medium-risk mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                                        Unusual Network Traffic
+                                    </h6>
+                                    <p class="mb-1">High data transfer volume detected from database server</p>
+                                    <div class="small text-muted">
+                                        <i class="fas fa-clock"></i> 15 minutes ago
+                                        <span class="ms-3"><i class="fas fa-globe"></i> 10.0.0.15</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-warning">MEDIUM</span>
+                                    <div class="mt-2">
+                                        <button class="btn btn-sm btn-warning me-1" onclick="respondToThreat('monitor', '10.0.0.15')">
+                                            <i class="fas fa-eye"></i> Monitor
+                                        </button>
+                                        <button class="btn btn-sm btn-info" onclick="investigateThreat('network-traffic')">
+                                            <i class="fas fa-search"></i> Investigate
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="col-lg-4 mb-4">
+            <!-- Threat Statistics -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Threat Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="threatDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline" id="recentActivity">
+                        <div class="timeline-item">
+                            <small class="text-muted">2 min ago</small>
+                            <div>Blocked IP: 192.168.1.105</div>
+                        </div>
+                        <div class="timeline-item">
+                            <small class="text-muted">5 min ago</small>
+                            <div>Isolated system: web-server-01</div>
+                        </div>
+                        <div class="timeline-item">
+                            <small class="text-muted">12 min ago</small>
+                            <div>Resolved: Suspicious process</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blocked IPs Table -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-ban"></i> Blocked IP Addresses</h5>
+                    <button class="btn btn-sm btn-outline-light" onclick="showBlockIPModal()">
+                        <i class="fas fa-plus"></i> Block IP
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>IP Address</th>
+                                    <th>Reason</th>
+                                    <th>Blocked At</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="blockedIPsTable">
+                                <tr>
+                                    <td>192.168.1.105</td>
+                                    <td>Brute force attack</td>
+                                    <td>2024-02-24 01:15:30</td>
+                                    <td><span class="badge bg-danger">Active</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" onclick="unblockIP('192.168.1.105')">
+                                            <i class="fas fa-unlock"></i> Unblock
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>203.0.113.45</td>
+                                    <td>Port scanning</td>
+                                    <td>2024-02-24 00:45:15</td>
+                                    <td><span class="badge bg-danger">Active</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" onclick="unblockIP('203.0.113.45')">
+                                            <i class="fas fa-unlock"></i> Unblock
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Block IP Modal -->
+<div class="modal fade" id="blockIPModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-ban"></i> Block IP Address
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="blockIPForm">
+                    <div class="mb-3">
+                        <label for="ipAddress" class="form-label">IP Address</label>
+                        <input type="text" class="form-control" id="ipAddress" required 
+                               placeholder="e.g., 192.168.1.100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="blockReason" class="form-label">Reason</label>
+                        <select class="form-select" id="blockReason">
+                            <option value="brute_force">Brute Force Attack</option>
+                            <option value="port_scan">Port Scanning</option>
+                            <option value="malicious_activity">Malicious Activity</option>
+                            <option value="suspicious_behavior">Suspicious Behavior</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="blockIP()">
+                    <i class="fas fa-ban"></i> Block IP
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let threatDistributionChart;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeThreatChart();
+        loadThreatData();
+    });
+
+    function initializeThreatChart() {
+        const ctx = document.getElementById('threatDistributionChart').getContext('2d');
+        threatDistributionChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['High Risk', 'Medium Risk', 'Low Risk', 'Resolved'],
+                datasets: [{
+                    data: [3, 5, 8, 12],
+                    backgroundColor: ['#dc3545', '#ffc107', '#17a2b8', '#28a745']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    }
+
+    async function loadThreatData() {
+        try {
+            const data = await fetchAPI('/security-overview');
+            updateThreatMetrics(data);
+        } catch (error) {
+            console.error('Failed to load threat data:', error);
+        }
+    }
+
+    function updateThreatMetrics(data) {
+        document.getElementById('activeThreats').textContent = data.active_responses.length;
+        document.getElementById('blockedIPs').textContent = '47';
+        document.getElementById('isolatedSystems').textContent = '2';
+        document.getElementById('resolvedToday').textContent = '12';
+        
+        const riskDist = data.trust_statistics.risk_distribution;
+        threatDistributionChart.data.datasets[0].data = [
+            riskDist.high || 0,
+            riskDist.medium || 0,
+            riskDist.low || 0,
+            12
+        ];
+        threatDistributionChart.update();
+    }
+
+    function scanForThreats() {
+        showNotification('Scanning for threats...', 'info');
+        setTimeout(() => {
+            showNotification('Threat scan completed. No new threats detected.', 'success');
+            loadThreatData();
+        }, 3000);
+    }
+
+    function refreshThreats() {
+        showNotification('Refreshing threat data...', 'info');
+        loadThreatData();
+    }
+
+    function respondToThreat(action, target) {
+        const actions = {
+            'block': 'Blocked',
+            'monitor': 'Monitoring',
+            'ignore': 'Ignored'
+        };
+        
+        showNotification(`${actions[action]}: ${target}`, 'warning');
+        setTimeout(() => {
+            loadThreatData();
+        }, 1000);
+    }
+
+    function investigateThreat(threatId) {
+        showNotification(`Investigating threat: ${threatId}`, 'info');
+    }
+
+    function unblockIP(ipAddress) {
+        if (confirm(`Are you sure you want to unblock IP ${ipAddress}?`)) {
+            showNotification(`IP ${ipAddress} unblocked successfully`, 'success');
+            const row = event.target.closest('tr');
+            row.remove();
+            const blockedCount = document.getElementById('blockedIPs');
+            blockedCount.textContent = Math.max(0, parseInt(blockedCount.textContent) - 1);
+        }
+    }
+
+    function showBlockIPModal() {
+        const modal = new bootstrap.Modal(document.getElementById('blockIPModal'));
+        modal.show();
+    }
+
+    async function blockIP() {
+        const ipAddress = document.getElementById('ipAddress').value;
+        const reason = document.getElementById('blockReason').value;
+        
+        if (!ipAddress) {
+            showNotification('Please enter an IP address', 'warning');
+            return;
+        }
+        
+        try {
+            const result = await fetchAPI('/block-ip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip_address: ipAddress })
+            });
+            
+            showNotification(`IP ${ipAddress} blocked successfully (${reason})`, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('blockIPModal')).hide();
+            document.getElementById('ipAddress').value = '';
+            loadThreatData();
+        } catch (error) {
+            showNotification('Failed to block IP address', 'danger');
+        }
+    }
+
+    socket.on('security_alert', function(data) {
+        showNotification(`New security alert: ${data.message}`, 'warning');
+        loadThreatData();
+    });
+</script>
+
+<style>
+.threat-item {
+    border-left: 4px solid;
+    padding: 15px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+}
+
+.threat-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.threat-item.high-risk {
+    border-left-color: #dc3545;
+}
+
+.threat-item.medium-risk {
+    border-left-color: #ffc107;
+}
+
+.threat-item.low-risk {
+    border-left-color: #17a2b8;
+}
+
+.timeline-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.timeline-item:last-child {
+    border-bottom: none;
+}
+
+.metric-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.chart-container {
+    position: relative;
+}
+</style>
+{% endblock %}

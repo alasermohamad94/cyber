@@ -1,0 +1,307 @@
+"""
+Response Engine Module
+
+This module implements automated response actions for the cyber defense system.
+It executes security decisions made by the decision engine.
+"""
+
+import time
+import random
+from typing import Dict, Any, List
+from dataclasses import dataclass
+from enum import Enum
+
+
+class ResponseStatus(Enum):
+    """Response execution status."""
+    PENDING = "pending"
+    EXECUTING = "executing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+@dataclass(frozen=True)
+class ResponseAction:
+    """
+    Response action data structure.
+    
+    Attributes
+    ----------
+    action_id:
+        Unique identifier for the response action
+    entity_id:
+        Target entity identifier
+    action_type:
+        Type of response action
+    status:
+        Current execution status
+    timestamp:
+        When the action was initiated
+    completion_time:
+        When the action was completed (None if not completed)
+    details:
+        Additional details about the response
+    """
+    action_id: str
+    entity_id: str
+    action_type: str
+    status: ResponseStatus
+    timestamp: float
+    completion_time: float
+    details: Dict[str, Any]
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary format."""
+        return {
+            'action_id': self.action_id,
+            'entity_id': self.entity_id,
+            'action_type': self.action_type,
+            'status': self.status.value,
+            'timestamp': self.timestamp,
+            'completion_time': self.completion_time,
+            'details': self.details
+        }
+
+
+class ResponseExecutor:
+    """
+    Handles the execution of security response actions.
+    
+    In a real system, this would interface with actual security infrastructure
+    like firewalls, IDS/IPS, endpoint detection systems, etc.
+    """
+    
+    def __init__(self):
+        self.active_responses: Dict[str, ResponseAction] = {}
+        self.response_history: List[ResponseAction] = []
+        
+    def _generate_action_id(self) -> str:
+        """Generate a unique action ID."""
+        return f"resp_{int(time.time())}_{random.randint(1000, 9999)}"
+    
+    def _execute_monitor_action(self, entity_id: str, details: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a monitoring action."""
+        # In a real system, this would adjust monitoring levels, logging, etc.
+        return {
+            'status': 'completed',
+            'message': f"Enhanced monitoring activated for {entity_id}",
+            'monitoring_level': 'elevated',
+            'log_retention': 'extended'
+        }
+    
+    def _execute_alert_action(self, entity_id: str, details: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute an alert action."""
+        # In a real system, this would send alerts to SOC, email, SIEM, etc.
+        alert_id = f"alert_{int(time.time())}"
+        return {
+            'status': 'completed',
+            'message': f"Security alert generated for {entity_id}",
+            'alert_id': alert_id,
+            'recipients': ['soc_team', 'security_analysts'],
+            'priority': details.get('severity', 'medium')
+        }
+    
+    def _execute_block_action(self, entity_id: str, details: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a blocking action."""
+        # In a real system, this would update firewall rules, ACLs, etc.
+        block_id = f"block_{int(time.time())}"
+        return {
+            'status': 'completed',
+            'message': f"Blocking action applied to {entity_id}",
+            'block_id': block_id,
+            'block_type': 'network_access',
+            'duration': '3600',  # 1 hour in seconds
+            'auto_release': True
+        }
+    
+    def _execute_isolate_action(self, entity_id: str, details: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute an isolation action."""
+        # In a real system, this would quarantine the endpoint, disable accounts, etc.
+        isolate_id = f"isolate_{int(time.time())}"
+        return {
+            'status': 'completed',
+            'message': f"Isolation protocol activated for {entity_id}",
+            'isolate_id': isolate_id,
+            'isolation_type': 'full_quarantine',
+            'affected_systems': ['network', 'applications', 'data_access'],
+            'requires_manual_review': True
+        }
+    
+    def execute_action(self, entity_id: str, decision: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute a security response action based on the decision.
+        
+        Args:
+            entity_id: Target entity identifier
+            decision: Security decision from decision engine
+            
+        Returns:
+            Response result dictionary
+        """
+        action_type = decision.get('action', 'monitor')
+        severity = decision.get('severity', 'low')
+        
+        # Create response action record
+        action_id = self._generate_action_id()
+        current_time = time.time()
+        
+        response_action = ResponseAction(
+            action_id=action_id,
+            entity_id=entity_id,
+            action_type=action_type,
+            status=ResponseStatus.EXECUTING,
+            timestamp=current_time,
+            completion_time=0.0,
+            details=decision.copy()
+        )
+        
+        self.active_responses[action_id] = response_action
+        
+        try:
+            # Execute the appropriate action
+            if action_type == 'monitor':
+                result = self._execute_monitor_action(entity_id, decision)
+            elif action_type == 'alert':
+                result = self._execute_alert_action(entity_id, decision)
+            elif action_type == 'block':
+                result = self._execute_block_action(entity_id, decision)
+            elif action_type == 'isolate':
+                result = self._execute_isolate_action(entity_id, decision)
+            else:
+                raise ValueError(f"Unknown action type: {action_type}")
+            
+            # Update action status to completed
+            completion_time = time.time()
+            completed_action = ResponseAction(
+                action_id=action_id,
+                entity_id=entity_id,
+                action_type=action_type,
+                status=ResponseStatus.COMPLETED,
+                timestamp=current_time,
+                completion_time=completion_time,
+                details=decision.copy()
+            )
+            
+            # Update records
+            self.active_responses[action_id] = completed_action
+            self.response_history.append(completed_action)
+            
+            # Add execution details to result
+            result.update({
+                'action_id': action_id,
+                'entity_id': entity_id,
+                'action_type': action_type,
+                'execution_time': completion_time - current_time,
+                'status': 'completed'
+            })
+            
+            return result
+            
+        except Exception as e:
+            # Handle execution failure
+            failed_action = ResponseAction(
+                action_id=action_id,
+                entity_id=entity_id,
+                action_type=action_type,
+                status=ResponseStatus.FAILED,
+                timestamp=current_time,
+                completion_time=time.time(),
+                details={**decision, 'error': str(e)}
+            )
+            
+            self.active_responses[action_id] = failed_action
+            self.response_history.append(failed_action)
+            
+            return {
+                'action_id': action_id,
+                'entity_id': entity_id,
+                'action_type': action_type,
+                'status': 'failed',
+                'error': str(e),
+                'message': f"Failed to execute {action_type} action for {entity_id}"
+            }
+    
+    def get_active_responses(self) -> List[Dict[str, Any]]:
+        """Get list of currently active responses."""
+        return [action.to_dict() for action in self.active_responses.values()
+                if action.status in [ResponseStatus.PENDING, ResponseStatus.EXECUTING]]
+    
+    def get_response_history(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get response history."""
+        return [action.to_dict() for action in self.response_history[-limit:]]
+    
+    def cancel_response(self, action_id: str) -> Dict[str, Any]:
+        """Cancel an active response."""
+        if action_id not in self.active_responses:
+            return {
+                'status': 'failed',
+                'message': f"Action {action_id} not found"
+            }
+        
+        action = self.active_responses[action_id]
+        if action.status in [ResponseStatus.COMPLETED, ResponseStatus.FAILED, ResponseStatus.CANCELLED]:
+            return {
+                'status': 'failed',
+                'message': f"Action {action_id} cannot be cancelled (status: {action.status.value})"
+            }
+        
+        # Update to cancelled
+        cancelled_action = ResponseAction(
+            action_id=action.action_id,
+            entity_id=action.entity_id,
+            action_type=action.action_type,
+            status=ResponseStatus.CANCELLED,
+            timestamp=action.timestamp,
+            completion_time=time.time(),
+            details=action.details
+        )
+        
+        self.active_responses[action_id] = cancelled_action
+        self.response_history.append(cancelled_action)
+        
+        return {
+            'status': 'completed',
+            'message': f"Action {action_id} cancelled successfully"
+        }
+
+
+# Global response executor instance
+_response_executor = ResponseExecutor()
+
+
+def execute_response(entity_id: str, decision: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Execute a security response action.
+    
+    This is the main entry point for the response engine.
+    
+    Args:
+        entity_id: Target entity identifier
+        decision: Security decision from decision engine
+        
+    Returns:
+        Response execution result
+    """
+    return _response_executor.execute_action(entity_id, decision)
+
+
+def get_active_responses() -> List[Dict[str, Any]]:
+    """Get currently active response actions."""
+    return _response_executor.get_active_responses()
+
+
+def get_response_history(limit: int = 100) -> List[Dict[str, Any]]:
+    """Get response action history."""
+    return _response_executor.get_response_history(limit)
+
+
+def cancel_response(action_id: str) -> Dict[str, Any]:
+    """Cancel an active response action."""
+    return _response_executor.cancel_response(action_id)
+
+
+__all__ = [
+    "ResponseAction", "ResponseStatus", "ResponseExecutor",
+    "execute_response", "get_active_responses", "get_response_history", "cancel_response"
+]

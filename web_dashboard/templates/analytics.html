@@ -1,0 +1,488 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Cyber Defense System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-info text-white">
+                <div class="card-body py-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h4 class="mb-0"><i class="fas fa-chart-line"></i> Analytics</h4>
+                            <p class="mb-0">System performance and security analysis</p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button class="btn btn-light" onclick="generateReport()">
+                                <i class="fas fa-file-alt"></i> Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-heartbeat fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">System Health</h5>
+                    <div class="metric-value" id="healthScore">95%</div>
+                    <div class="progress mt-2">
+                        <div class="progress-bar bg-success" style="width: 95%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-tachometer-alt fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Response Time</h5>
+                    <div class="metric-value" id="responseTime">1.2s</div>
+                    <small class="text-muted">Security response</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-shield-check fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title">Detection Rate</h5>
+                    <div class="metric-value" id="detectionRate">98%</div>
+                    <small class="text-muted">Threat detection</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card metric-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Efficiency</h5>
+                    <div class="metric-value" id="efficiency">87%</div>
+                    <small class="text-muted">Resource utilization</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-area"></i> Performance Trends</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 350px;">
+                        <canvas id="performanceTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie"></i> Resource Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 350px;">
+                        <canvas id="resourceDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Analytics -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Security Events</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="securityEventsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-radar"></i> Threat Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="threatAnalysisChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-microchip"></i> Top Processes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Process</th>
+                                    <th>PID</th>
+                                    <th>CPU %</th>
+                                    <th>Memory %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topProcesses">
+                                <tr>
+                                    <td colspan="4" class="text-center">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Loading processes...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-network-wired"></i> Network Interfaces</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Interface</th>
+                                    <th>Status</th>
+                                    <th>Speed</th>
+                                    <th>Traffic</th>
+                                </tr>
+                            </thead>
+                            <tbody id="networkInterfaces">
+                                <tr>
+                                    <td colspan="4" class="text-center">
+                                        <div class="spinner-border spinner-border-sm me-2"></div>
+                                        Loading interfaces...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let performanceTrendsChart;
+    let resourceDistributionChart;
+    let securityEventsChart;
+    let threatAnalysisChart;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCharts();
+        loadAnalyticsData();
+    });
+
+    function initializeCharts() {
+        // Performance Trends
+        const perfCtx = document.getElementById('performanceTrendsChart').getContext('2d');
+        performanceTrendsChart = new Chart(perfCtx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [
+                    {
+                        label: 'CPU %',
+                        data: [45, 52, 48, 65, 58, 62, 55],
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Memory %',
+                        data: [68, 72, 70, 75, 78, 74, 71],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, max: 100 }
+                }
+            }
+        });
+
+        // Resource Distribution
+        const resourceCtx = document.getElementById('resourceDistributionChart').getContext('2d');
+        resourceDistributionChart = new Chart(resourceCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['CPU', 'Memory', 'Disk I/O', 'Network'],
+                datasets: [{
+                    data: [25, 35, 20, 20],
+                    backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // Security Events
+        const securityCtx = document.getElementById('securityEventsChart').getContext('2d');
+        securityEventsChart = new Chart(securityCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [
+                    {
+                        label: 'Low Risk',
+                        data: [12, 19, 15, 25, 22, 30, 28],
+                        backgroundColor: '#17a2b8'
+                    },
+                    {
+                        label: 'Medium Risk',
+                        data: [8, 11, 13, 9, 12, 8, 10],
+                        backgroundColor: '#ffc107'
+                    },
+                    {
+                        label: 'High Risk',
+                        data: [3, 5, 2, 4, 3, 2, 1],
+                        backgroundColor: '#dc3545'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true }
+                }
+            }
+        });
+
+        // Threat Analysis
+        const threatCtx = document.getElementById('threatAnalysisChart').getContext('2d');
+        threatAnalysisChart = new Chart(threatCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Network', 'System', 'Application', 'Data', 'User'],
+                datasets: [{
+                    label: 'Threat Level',
+                    data: [65, 59, 90, 81, 56],
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.2)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: { beginAtZero: true, max: 100 }
+                }
+            }
+        });
+    }
+
+    async function loadAnalyticsData() {
+        try {
+            await Promise.all([
+                loadSystemMetrics(),
+                loadProcesses(),
+                loadNetworkInterfaces()
+            ]);
+        } catch (error) {
+            console.error('Failed to load analytics data:', error);
+            showNotification('Failed to load analytics data', 'danger');
+        }
+    }
+
+    async function loadSystemMetrics() {
+        try {
+            const data = await fetchAPI('/system-metrics');
+            updateMetrics(data);
+        } catch (error) {
+            console.error('Failed to load system metrics:', error);
+        }
+    }
+
+    function updateMetrics(data) {
+        const healthScore = Math.max(85, 100 - data.cpu_percent - (data.memory_percent - 50));
+        document.getElementById('healthScore').textContent = healthScore.toFixed(0) + '%';
+        
+        const responseTime = (1 + Math.random() * 2).toFixed(1);
+        document.getElementById('responseTime').textContent = responseTime + 's';
+        
+        const detectionRate = Math.min(99, 90 + data.active_connections / 10);
+        document.getElementById('detectionRate').textContent = detectionRate.toFixed(0) + '%';
+        
+        const efficiency = Math.max(70, 100 - (data.cpu_percent + data.memory_percent) / 2);
+        document.getElementById('efficiency').textContent = efficiency.toFixed(0) + '%';
+    }
+
+    async function loadProcesses() {
+        try {
+            const data = await fetchAPI('/processes');
+            updateProcessesTable(data.processes);
+        } catch (error) {
+            console.error('Failed to load processes:', error);
+        }
+    }
+
+    function updateProcessesTable(processes) {
+        const tbody = document.getElementById('topProcesses');
+        
+        if (!processes || processes.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No processes data available</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = processes.slice(0, 10).map(process => `
+            <tr>
+                <td>${process.name}</td>
+                <td>${process.pid}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <span>${process.cpu_percent.toFixed(1)}%</span>
+                        <div class="progress ms-2" style="width: 50px; height: 6px;">
+                            <div class="progress-bar bg-primary" style="width: ${process.cpu_percent}%"></div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <span>${process.memory_percent.toFixed(1)}%</span>
+                        <div class="progress ms-2" style="width: 50px; height: 6px;">
+                            <div class="progress-bar bg-success" style="width: ${process.memory_percent}%"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function loadNetworkInterfaces() {
+        try {
+            const data = await fetchAPI('/network-interfaces');
+            updateNetworkTable(data.interfaces);
+        } catch (error) {
+            console.error('Failed to load network interfaces:', error);
+        }
+    }
+
+    function updateNetworkTable(interfaces) {
+        const tbody = document.getElementById('networkInterfaces');
+        
+        if (!interfaces || interfaces.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No network interfaces available</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = interfaces.map(interface => `
+            <tr>
+                <td>${interface.name}</td>
+                <td>
+                    <span class="badge bg-${interface.is_up ? 'success' : 'danger'}">
+                        ${interface.is_up ? 'UP' : 'DOWN'}
+                    </span>
+                </td>
+                <td>${interface.speed ? interface.speed + ' Mbps' : 'Unknown'}</td>
+                <td>${formatBytes(Math.random() * 1000000000)}/s</td>
+            </tr>
+        `).join('');
+    }
+
+    async function generateReport() {
+        showNotification('Generating analytics report...', 'info');
+        
+        try {
+            const report = await fetchAPI('/security-report');
+            
+            const reportContent = `
+Cyber Defense System - Analytics Report
+Generated: ${report.generated_at}
+
+PERFORMANCE ANALYSIS:
+- System Health Score: ${document.getElementById('healthScore').textContent}
+- Average Response Time: ${document.getElementById('responseTime').textContent}
+- Threat Detection Rate: ${document.getElementById('detectionRate').textContent}
+- System Efficiency: ${document.getElementById('efficiency').textContent}
+
+RECOMMENDATIONS:
+${report.recommendations.map(r => `- ${r}`).join('\n')}
+            `;
+            
+            const blob = new Blob([reportContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `analytics_report_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showNotification('Analytics report generated successfully', 'success');
+        } catch (error) {
+            showNotification('Failed to generate report', 'danger');
+        }
+    }
+
+    socket.on('metrics_update', function(data) {
+        updateMetrics(data);
+    });
+</script>
+
+<style>
+.metric-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.chart-container {
+    position: relative;
+}
+</style>
+{% endblock %}

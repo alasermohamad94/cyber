@@ -1,0 +1,505 @@
+/*
+ * Cyber Defense System - Forest Theme CSS
+ * Professional forest color palette with #002623 as dominant color
+ */
+
+/* ===== PRIMARY COLORS ===== */
+:root {
+    --forest-primary: #002623;        /* Dominant forest color */
+    --forest-secondary: #054239;      /* Secondary forest */
+    --forest-light: #b9a779;          /* Golden wheat */
+    --forest-medium: #988561;        /* Forest medium */
+    --forest-dark: #6b1f2a;          /* Deep umber */
+    --forest-accent: #4a151e;         /* Deep red accent */
+    --forest-accent-dark: #260f14;    /* Dark red accent */
+    
+    /* Neutral Colors */
+    --forest-white: #ffffff;           /* Pure white */
+    --forest-gray-light: #3d3a3b;     /* Charcoal light */
+    --forest-gray-dark: #161616;      /* Charcoal dark */
+    
+    /* Status Colors */
+    --forest-success: #988561;        /* Forest medium for success */
+    --forest-warning: #b9a779;        /* Golden wheat for warnings */
+    --forest-error: #6b1f2a;          /* Deep umber for errors */
+    --forest-info: #054239;             /* Forest secondary for info */
+    --forest-critical: #4a151e;        /* Deep red for critical */
+    
+    /* Progress Colors */
+    --forest-progress-complete: #988561;
+    --forest-progress-warning: #b9a779;
+    --forest-progress-danger: #6b1f2a;
+    --forest-progress-critical: #4a151e;
+    
+    /* Chart Colors */
+    --forest-chart-1: #002623;
+    --forest-chart-2: #054239;
+    --forest-chart-3: #b9a779;
+    --forest-chart-4: #988561;
+    --forest-chart-5: #6b1f2a;
+    --forest-chart-6: #4a151e;
+    --forest-chart-7: #3d3a3b;
+    --forest-chart-8: #161616;
+    
+    /* Semantic Colors */
+    --forest-bg-primary: var(--forest-primary);
+    --forest-bg-secondary: var(--forest-secondary);
+    --forest-text-primary: var(--forest-white);
+    --forest-text-secondary: var(--forest-light);
+    --forest-border: var(--forest-secondary);
+    --forest-shadow: rgba(0, 38, 35, 0.3);
+}
+
+/* ===== GLOBAL STYLES ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--forest-primary) 0%, var(--forest-secondary) 100%);
+    color: var(--forest-text-primary);
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+/* ===== LAYOUT COMPONENTS ===== */
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    background: rgba(0, 38, 35, 0.1);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--forest-border);
+}
+
+.header {
+    background: linear-gradient(135deg, var(--forest-primary) 0%, var(--forest-secondary) 100%);
+    color: var(--forest-text-primary);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 20px var(--forest-shadow);
+    margin-bottom: 30px;
+    border: 1px solid var(--forest-border);
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.header .subtitle {
+    font-size: 1.1rem;
+    color: var(--forest-light);
+    opacity: 0.9;
+}
+
+/* ===== CARD COMPONENTS ===== */
+.card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 8px 32px var(--forest-shadow);
+    border: 1px solid var(--forest-border);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px var(--forest-shadow);
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--forest-primary) 0%, var(--forest-secondary) 100%);
+    color: var(--forest-text-primary);
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin: -25px -25px 20px -25px;
+    font-size: 1.3rem;
+    font-weight: 600;
+    border-bottom: 3px solid var(--forest-accent);
+}
+
+.card-content {
+    padding: 20px 0;
+}
+
+/* ===== METRICS DISPLAY ===== */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.metric-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    border: 2px solid var(--forest-border);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--forest-primary), var(--forest-secondary));
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--forest-primary);
+    margin: 10px 0;
+    text-shadow: 1px 1px 2px rgba(0, 38, 35, 0.1);
+}
+
+.metric-label {
+    font-size: 1rem;
+    color: var(--forest-gray-light);
+    font-weight: 500;
+}
+
+.metric-change {
+    font-size: 0.9rem;
+    padding: 4px 8px;
+    border-radius: 20px;
+    margin-top: 10px;
+    display: inline-block;
+}
+
+.metric-change.positive {
+    background: var(--forest-success);
+    color: var(--forest-text-primary);
+}
+
+.metric-change.negative {
+    background: var(--forest-error);
+    color: var(--forest-text-primary);
+}
+
+/* ===== PROGRESS BARS ===== */
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--forest-gray-light);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.6s ease;
+    background: linear-gradient(90deg, var(--forest-primary), var(--forest-secondary));
+}
+
+.progress-fill.success {
+    background: linear-gradient(90deg, var(--forest-success), var(--forest-medium));
+}
+
+.progress-fill.warning {
+    background: linear-gradient(90deg, var(--forest-warning), var(--forest-light));
+}
+
+.progress-fill.danger {
+    background: linear-gradient(90deg, var(--forest-error), var(--forest-dark));
+}
+
+.progress-fill.critical {
+    background: linear-gradient(90deg, var(--forest-critical), var(--forest-accent-dark));
+}
+
+/* ===== CHARTS ===== */
+.chart-container {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 8px 32px var(--forest-shadow);
+    border: 1px solid var(--forest-border);
+}
+
+.chart-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--forest-primary);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+/* ===== SECURITY STATUS ===== */
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    animation: pulse 2s infinite;
+}
+
+.status-indicator.healthy {
+    background: var(--forest-success);
+    box-shadow: 0 0 10px var(--forest-success);
+}
+
+.status-indicator.warning {
+    background: var(--forest-warning);
+    box-shadow: 0 0 10px var(--forest-warning);
+}
+
+.status-indicator.critical {
+    background: var(--forest-critical);
+    box-shadow: 0 0 10px var(--forest-critical);
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+/* ===== TABLES ===== */
+.forest-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px var(--forest-shadow);
+}
+
+.forest-table th {
+    background: linear-gradient(135deg, var(--forest-primary) 0%, var(--forest-secondary) 100%);
+    color: var(--forest-text-primary);
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.forest-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--forest-border);
+    color: var(--forest-gray-dark);
+}
+
+.forest-table tr:hover {
+    background: rgba(0, 38, 35, 0.05);
+}
+
+.forest-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* ===== BUTTONS ===== */
+.forest-btn {
+    background: linear-gradient(135deg, var(--forest-primary) 0%, var(--forest-secondary) 100%);
+    color: var(--forest-text-primary);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    box-shadow: 0 4px 15px var(--forest-shadow);
+}
+
+.forest-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px var(--forest-shadow);
+    background: linear-gradient(135deg, var(--forest-secondary) 0%, var(--forest-primary) 100%);
+}
+
+.forest-btn.success {
+    background: linear-gradient(135deg, var(--forest-success) 0%, var(--forest-medium) 100%);
+}
+
+.forest-btn.warning {
+    background: linear-gradient(135deg, var(--forest-warning) 0%, var(--forest-light) 100%);
+}
+
+.forest-btn.danger {
+    background: linear-gradient(135deg, var(--forest-error) 0%, var(--forest-dark) 100%);
+}
+
+.forest-btn.critical {
+    background: linear-gradient(135deg, var(--forest-critical) 0%, var(--forest-accent-dark) 100%);
+}
+
+/* ===== ALERTS ===== */
+.forest-alert {
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border-left: 5px solid;
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.forest-alert.success {
+    border-left-color: var(--forest-success);
+    background: rgba(152, 133, 97, 0.1);
+}
+
+.forest-alert.warning {
+    border-left-color: var(--forest-warning);
+    background: rgba(185, 167, 121, 0.1);
+}
+
+.forest-alert.error {
+    border-left-color: var(--forest-error);
+    background: rgba(107, 31, 42, 0.1);
+}
+
+.forest-alert.critical {
+    border-left-color: var(--forest-critical);
+    background: rgba(74, 21, 30, 0.1);
+}
+
+/* ===== NAVIGATION ===== */
+.forest-nav {
+    background: rgba(0, 38, 35, 0.95);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    backdrop-filter: blur(10px);
+}
+
+.forest-nav-item {
+    color: var(--forest-text-primary);
+    text-decoration: none;
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.forest-nav-item:hover {
+    background: var(--forest-secondary);
+    transform: translateY(-2px);
+}
+
+.forest-nav-item.active {
+    background: var(--forest-accent);
+    color: var(--forest-text-primary);
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 10px;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .card {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-container {
+        padding: 5px;
+    }
+    
+    .header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .metric-value {
+        font-size: 1.8rem;
+    }
+    
+    .forest-table {
+        font-size: 0.9rem;
+    }
+    
+    .forest-table th,
+    .forest-table td {
+        padding: 8px 10px;
+    }
+}
+
+/* ===== ANIMATIONS ===== */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+    animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--forest-gray-light);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--forest-primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--forest-secondary);
+}
+
+/* ===== LOADING SPINNERS ===== */
+.forest-spinner {
+    border: 3px solid var(--forest-gray-light);
+    border-top: 3px solid var(--forest-primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
