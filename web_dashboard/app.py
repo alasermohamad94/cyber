@@ -214,7 +214,7 @@ def format_duration(seconds: float) -> str:
         return f"{secs}s"
 
 # Routes
-@app.route('/')
+@app.route('/web_dashboard')
 def index():
     """Main dashboard page."""
     return render_template('dashboard.html')
