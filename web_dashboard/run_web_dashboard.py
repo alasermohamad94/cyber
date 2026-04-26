@@ -60,8 +60,11 @@ def main():
         # Import and run the app
         from app import app, socketio
         
+        # Get port from environment or default to 8080
+        port = int(os.environ.get('PORT', 8080))
+        
         # Start the server
-        socketio.run(app, host='0.0.0.0', port=8080, debug=False)
+        socketio.run(app, host='0.0.0.0', port=port, debug=False)
         
     except KeyboardInterrupt:
         print("\n\nServer stopped by user")
