@@ -32,9 +32,9 @@
                 <div class="card-body text-center">
                     <i class="fas fa-heartbeat fa-3x text-success mb-3"></i>
                     <h5 class="card-title">System Health</h5>
-                    <div class="metric-value" id="healthScore">95%</div>
+                    <div class="metric-value" id="healthScore">N/A</div>
                     <div class="progress mt-2">
-                        <div class="progress-bar bg-success" style="width: 95%"></div>
+                        <div class="progress-bar bg-success" id="healthProgress" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
@@ -45,8 +45,8 @@
                 <div class="card-body text-center">
                     <i class="fas fa-tachometer-alt fa-3x text-primary mb-3"></i>
                     <h5 class="card-title">Response Time</h5>
-                    <div class="metric-value" id="responseTime">1.2s</div>
-                    <small class="text-muted">Security response</small>
+                    <div class="metric-value" id="responseTime">N/A</div>
+                    <small class="text-muted">API latency</small>
                 </div>
             </div>
         </div>
@@ -56,8 +56,8 @@
                 <div class="card-body text-center">
                     <i class="fas fa-shield-check fa-3x text-warning mb-3"></i>
                     <h5 class="card-title">Detection Rate</h5>
-                    <div class="metric-value" id="detectionRate">98%</div>
-                    <small class="text-muted">Threat detection</small>
+                    <div class="metric-value" id="detectionRate">N/A</div>
+                    <small class="text-muted">Trust coverage</small>
                 </div>
             </div>
         </div>
@@ -67,7 +67,7 @@
                 <div class="card-body text-center">
                     <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
                     <h5 class="card-title">Efficiency</h5>
-                    <div class="metric-value" id="efficiency">87%</div>
+                    <div class="metric-value" id="efficiency">N/A</div>
                     <small class="text-muted">Resource utilization</small>
                 </div>
             </div>
@@ -215,18 +215,18 @@
         performanceTrendsChart = new Chart(perfCtx, {
             type: 'line',
             data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                labels: [],
                 datasets: [
                     {
                         label: 'CPU %',
-                        data: [45, 52, 48, 65, 58, 62, 55],
+                        data: [],
                         borderColor: '#007bff',
                         backgroundColor: 'rgba(0, 123, 255, 0.1)',
                         tension: 0.4
                     },
                     {
                         label: 'Memory %',
-                        data: [68, 72, 70, 75, 78, 74, 71],
+                        data: [],
                         borderColor: '#28a745',
                         backgroundColor: 'rgba(40, 167, 69, 0.1)',
                         tension: 0.4
@@ -247,9 +247,9 @@
         resourceDistributionChart = new Chart(resourceCtx, {
             type: 'doughnut',
             data: {
-                labels: ['CPU', 'Memory', 'Disk I/O', 'Network'],
+                labels: ['CPU', 'Memory', 'Disk', 'Connections'],
                 datasets: [{
-                    data: [25, 35, 20, 20],
+                    data: [0, 0, 0, 0],
                     backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545']
                 }]
             },
@@ -267,22 +267,12 @@
         securityEventsChart = new Chart(securityCtx, {
             type: 'bar',
             data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                labels: ['Low', 'Medium', 'High', 'Critical'],
                 datasets: [
                     {
-                        label: 'Low Risk',
-                        data: [12, 19, 15, 25, 22, 30, 28],
+                        label: 'Events',
+                        data: [0, 0, 0, 0],
                         backgroundColor: '#17a2b8'
-                    },
-                    {
-                        label: 'Medium Risk',
-                        data: [8, 11, 13, 9, 12, 8, 10],
-                        backgroundColor: '#ffc107'
-                    },
-                    {
-                        label: 'High Risk',
-                        data: [3, 5, 2, 4, 3, 2, 1],
-                        backgroundColor: '#dc3545'
                     }
                 ]
             },
@@ -290,8 +280,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    x: { stacked: true },
-                    y: { stacked: true }
+                    y: { beginAtZero: true }
                 }
             }
         });
@@ -304,7 +293,7 @@
                 labels: ['Network', 'System', 'Application', 'Data', 'User'],
                 datasets: [{
                     label: 'Threat Level',
-                    data: [65, 59, 90, 81, 56],
+                    data: [0, 0, 0, 0, 0],
                     borderColor: '#dc3545',
                     backgroundColor: 'rgba(220, 53, 69, 0.2)'
                 }]
@@ -322,7 +311,7 @@
     async function loadAnalyticsData() {
         try {
             await Promise.all([
-                loadSystemMetrics(),
+                loadAnalyticsSummary(),
                 loadProcesses(),
                 loadNetworkInterfaces()
             ]);
@@ -332,27 +321,57 @@
         }
     }
 
-    async function loadSystemMetrics() {
+    async function loadAnalyticsSummary() {
         try {
-            const data = await fetchAPI('/system-metrics');
-            updateMetrics(data);
+            const data = await fetchAPI('/analytics-data');
+            updateAnalytics(data);
         } catch (error) {
-            console.error('Failed to load system metrics:', error);
+            console.error('Failed to load analytics summary:', error);
         }
     }
 
-    function updateMetrics(data) {
-        const healthScore = Math.max(85, 100 - data.cpu_percent - (data.memory_percent - 50));
-        document.getElementById('healthScore').textContent = healthScore.toFixed(0) + '%';
-        
-        const responseTime = (1 + Math.random() * 2).toFixed(1);
-        document.getElementById('responseTime').textContent = responseTime + 's';
-        
-        const detectionRate = Math.min(99, 90 + data.active_connections / 10);
-        document.getElementById('detectionRate').textContent = detectionRate.toFixed(0) + '%';
-        
-        const efficiency = Math.max(70, 100 - (data.cpu_percent + data.memory_percent) / 2);
-        document.getElementById('efficiency').textContent = efficiency.toFixed(0) + '%';
+    function updateAnalytics(data) {
+        const summary = data.summary || {};
+        const current = data.current_metrics || {};
+
+        setElementText('healthScore', safeFixed(summary.system_health, 0) + '%');
+        document.getElementById('healthProgress').style.width = `${summary.system_health || 0}%`;
+        setElementText('responseTime', `${safeFixed(summary.api_latency_ms, 0)}ms`);
+        setElementText('detectionRate', summary.detection_coverage === null ? 'N/A' : `${safeFixed(summary.detection_coverage, 0)}%`);
+        setElementText('efficiency', `${safeFixed(summary.resource_efficiency, 0)}%`);
+
+        const history = data.metrics_history || [];
+        performanceTrendsChart.data.labels = history.map(point => point.time_formatted);
+        performanceTrendsChart.data.datasets[0].data = history.map(point => point.cpu_percent);
+        performanceTrendsChart.data.datasets[1].data = history.map(point => point.memory_percent);
+        performanceTrendsChart.update();
+
+        resourceDistributionChart.data.datasets[0].data = [
+            current.cpu_percent || 0,
+            current.memory_percent || 0,
+            current.disk_usage || 0,
+            Math.min(current.active_connections || 0, 100)
+        ];
+        resourceDistributionChart.update();
+
+        const severity = data.security_events_by_severity || {};
+        securityEventsChart.data.datasets[0].data = [
+            severity.low || 0,
+            severity.medium || 0,
+            severity.high || 0,
+            severity.critical || 0
+        ];
+        securityEventsChart.update();
+
+        const surface = data.threat_surface || {};
+        threatAnalysisChart.data.datasets[0].data = [
+            surface.network || 0,
+            surface.system || 0,
+            surface.application || 0,
+            surface.data || 0,
+            surface.user || 0
+        ];
+        threatAnalysisChart.update();
     }
 
     async function loadProcesses() {
@@ -422,7 +441,7 @@
                     </span>
                 </td>
                 <td>${interface.speed ? interface.speed + ' Mbps' : 'Unknown'}</td>
-                <td>${formatBytes(Math.random() * 1000000000)}/s</td>
+                <td>${interface.traffic ? `${interface.traffic.bytes_sent_formatted} sent / ${interface.traffic.bytes_recv_formatted} recv` : 'N/A'}</td>
             </tr>
         `).join('');
     }
@@ -462,7 +481,7 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
     }
 
     socket.on('metrics_update', function(data) {
-        updateMetrics(data);
+        loadAnalyticsSummary();
     });
 </script>
 

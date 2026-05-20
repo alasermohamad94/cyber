@@ -13,6 +13,7 @@ import time
 import threading
 import psutil
 import socket
+import re
 from datetime import datetime, timedelta
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for
 from flask_socketio import SocketIO, emit
@@ -31,7 +32,7 @@ from main import CyberDefenseSystem
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'cyber-defense-system-secret-key-2024'
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 @dataclass
 class ServerMetrics:
@@ -65,6 +66,7 @@ class WebServerMonitor:
         self.metrics_history = deque(maxlen=100)
         self.security_events = deque(maxlen=1000)
         self.alerts = deque(maxlen=100)
+        self.blocked_ips = {}
         self.start_time = time.time()
         self.monitoring = True
         self.cds = CyberDefenseSystem()
@@ -162,6 +164,22 @@ class WebServerMonitor:
             'total_events': len(self.security_events),
             'active_alerts': len(self.alerts)
         }
+
+    def get_metrics_history(self, limit: int = 30) -> list:
+        """Return recent metrics as serializable trend samples."""
+        return [
+            {
+                'timestamp': metrics.timestamp,
+                'time_formatted': datetime.fromtimestamp(metrics.timestamp).strftime('%H:%M:%S'),
+                'cpu_percent': metrics.cpu_percent,
+                'memory_percent': metrics.memory_percent,
+                'disk_usage': metrics.disk_usage,
+                'active_connections': metrics.active_connections,
+                'network_bytes_sent': metrics.network_io.get('bytes_sent', 0),
+                'network_bytes_recv': metrics.network_io.get('bytes_recv', 0)
+            }
+            for metrics in list(self.metrics_history)[-limit:]
+        ]
     
     def analyze_entity(self, entity_id: str, entity_data: dict) -> dict:
         """Analyze entity using cyber defense system."""
@@ -185,6 +203,94 @@ class WebServerMonitor:
                 'entity_id': entity_id,
                 'timestamp': time.time()
             }
+
+    def block_ip_address(self, ip_address: str, reason: str = 'manual_block') -> dict:
+        """Record a blocked IP address and emit a real security event."""
+        blocked_at = time.time()
+        self.blocked_ips[ip_address] = {
+            'ip_address': ip_address,
+            'reason': reason,
+            'blocked_at': blocked_at,
+            'blocked_at_formatted': datetime.fromtimestamp(blocked_at).strftime('%Y-%m-%d %H:%M:%S'),
+            'status': 'active'
+        }
+        self.add_security_event(
+            event_type="ip_blocked",
+            severity="medium",
+            source_ip=ip_address,
+            target_entity="firewall",
+            description=f"IP address {ip_address} blocked by administrator",
+            action_taken="blocked"
+        )
+        return self.blocked_ips[ip_address]
+
+    def unblock_ip_address(self, ip_address: str) -> bool:
+        """Mark a blocked IP address as unblocked."""
+        if ip_address not in self.blocked_ips:
+            return False
+        self.blocked_ips[ip_address]['status'] = 'unblocked'
+        self.add_security_event(
+            event_type="ip_unblocked",
+            severity="low",
+            source_ip=ip_address,
+            target_entity="firewall",
+            description=f"IP address {ip_address} unblocked by administrator",
+            action_taken="unblocked"
+        )
+        return True
+
+    def get_threat_summary(self) -> dict:
+        """Build threat management data from actual security records."""
+        events = list(self.security_events)
+        active_threats = [
+            event for event in events
+            if event.status == 'active' and event.severity in {'high', 'critical'}
+        ]
+        response_history = get_response_history()
+        resolved_today = 0
+        today = datetime.now().date()
+        for response in response_history:
+            completion_time = response.get('completion_time')
+            if completion_time and datetime.fromtimestamp(completion_time).date() == today:
+                resolved_today += 1
+
+        return {
+            'active_threats': [
+                {
+                    'event_id': event.event_id,
+                    'timestamp': event.timestamp,
+                    'time_formatted': datetime.fromtimestamp(event.timestamp).strftime('%H:%M:%S'),
+                    'event_type': event.event_type,
+                    'severity': event.severity,
+                    'source_ip': event.source_ip,
+                    'target_entity': event.target_entity,
+                    'description': event.description,
+                    'action_taken': event.action_taken,
+                    'status': event.status
+                }
+                for event in active_threats[-20:]
+            ],
+            'blocked_ips': [
+                item for item in self.blocked_ips.values()
+                if item.get('status') == 'active'
+            ],
+            'isolated_systems': [
+                response for response in response_history
+                if response.get('action_type') == 'isolate'
+                and response.get('status') in {'pending', 'executing', 'completed'}
+            ],
+            'resolved_today': resolved_today,
+            'recent_activity': [
+                {
+                    'timestamp': event.timestamp,
+                    'time_formatted': datetime.fromtimestamp(event.timestamp).strftime('%H:%M:%S'),
+                    'description': event.description,
+                    'event_type': event.event_type,
+                    'severity': event.severity
+                }
+                for event in events[-10:]
+            ]
+        }
 
 # Global monitor instance
 monitor = WebServerMonitor()
@@ -252,35 +358,108 @@ def get_system_metrics():
         'network_recv_formatted': format_bytes(metrics.network_io['bytes_recv'])
     })
 
+@app.route('/api/dashboard-state')
+def get_dashboard_state():
+    """Single API endpoint for initial dashboard state."""
+    start = time.time()
+    metrics = monitor.get_system_metrics()
+    security = build_security_overview()
+    payload = {
+        'system_metrics': {
+            'cpu_percent': metrics.cpu_percent,
+            'memory_percent': metrics.memory_percent,
+            'disk_usage': metrics.disk_usage,
+            'network_io': metrics.network_io,
+            'active_connections': metrics.active_connections,
+            'system_load': metrics.system_load,
+            'uptime': metrics.uptime,
+            'timestamp': metrics.timestamp,
+            'uptime_formatted': format_duration(metrics.uptime),
+            'network_sent_formatted': format_bytes(metrics.network_io['bytes_sent']),
+            'network_recv_formatted': format_bytes(metrics.network_io['bytes_recv'])
+        },
+        'security_overview': security,
+        'metrics_history': monitor.get_metrics_history(),
+        'api_latency_ms': round((time.time() - start) * 1000, 2)
+    }
+    return jsonify(payload)
+
+def build_security_overview() -> dict:
+    """Collect security overview data from project services."""
+    stats = get_trust_statistics()
+    active_responses = get_active_responses()
+    return {
+        'trust_statistics': stats,
+        'active_responses': active_responses,
+        'total_events': len(monitor.security_events),
+        'active_alerts': len(monitor.alerts),
+        'recent_events': [
+            {
+                'event_id': event.event_id,
+                'timestamp': event.timestamp,
+                'event_type': event.event_type,
+                'severity': event.severity,
+                'source_ip': event.source_ip,
+                'target_entity': event.target_entity,
+                'description': event.description,
+                'action_taken': event.action_taken,
+                'time_formatted': datetime.fromtimestamp(event.timestamp).strftime('%H:%M:%S')
+            }
+            for event in list(monitor.security_events)[-10:]
+        ]
+    }
+
 @app.route('/api/security-overview')
 def get_security_overview():
     """API endpoint for security overview."""
     try:
-        stats = get_trust_statistics()
-        active_responses = get_active_responses()
-        
-        return jsonify({
-            'trust_statistics': stats,
-            'active_responses': active_responses,
-            'total_events': len(monitor.security_events),
-            'active_alerts': len(monitor.alerts),
-            'recent_events': [
-                {
-                    'event_id': event.event_id,
-                    'timestamp': event.timestamp,
-                    'event_type': event.event_type,
-                    'severity': event.severity,
-                    'source_ip': event.source_ip,
-                    'target_entity': event.target_entity,
-                    'description': event.description,
-                    'action_taken': event.action_taken,
-                    'time_formatted': datetime.fromtimestamp(event.timestamp).strftime('%H:%M:%S')
-                }
-                for event in list(monitor.security_events)[-10:]
-            ]
-        })
+        return jsonify(build_security_overview())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analytics-data')
+def get_analytics_data():
+    """API endpoint for analytics charts and metrics."""
+    start = time.time()
+    metrics = monitor.get_system_metrics()
+    security = build_security_overview()
+    risk_distribution = security['trust_statistics'].get('risk_distribution', {})
+    events = list(monitor.security_events)
+    severity_counts = {
+        severity: sum(1 for event in events if event.severity == severity)
+        for severity in ['low', 'medium', 'high', 'critical']
+    }
+    total_entities = security['trust_statistics'].get('total_entities', 0)
+    high_risk_entities = risk_distribution.get('high', 0) + risk_distribution.get('critical', 0)
+    detection_coverage = None
+    if total_entities:
+        detection_coverage = max(0, min(100, ((total_entities - high_risk_entities) / total_entities) * 100))
+
+    return jsonify({
+        'summary': {
+            'system_health': max(0, min(100, 100 - max(metrics.cpu_percent, metrics.memory_percent, metrics.disk_usage))),
+            'api_latency_ms': round((time.time() - start) * 1000, 2),
+            'detection_coverage': detection_coverage,
+            'resource_efficiency': max(0, min(100, 100 - ((metrics.cpu_percent + metrics.memory_percent + metrics.disk_usage) / 3)))
+        },
+        'current_metrics': {
+            'cpu_percent': metrics.cpu_percent,
+            'memory_percent': metrics.memory_percent,
+            'disk_usage': metrics.disk_usage,
+            'active_connections': metrics.active_connections,
+            'network_io': metrics.network_io
+        },
+        'metrics_history': monitor.get_metrics_history(),
+        'security_events_by_severity': severity_counts,
+        'risk_distribution': risk_distribution,
+        'threat_surface': {
+            'network': min(100, metrics.active_connections),
+            'system': max(metrics.cpu_percent, metrics.memory_percent, metrics.disk_usage),
+            'application': risk_distribution.get('medium', 0) + risk_distribution.get('high', 0),
+            'data': risk_distribution.get('critical', 0),
+            'user': total_entities
+        }
+    })
 
 @app.route('/api/analyze-entity', methods=['POST'])
 def analyze_entity():
@@ -304,27 +483,44 @@ def block_ip():
     try:
         data = request.get_json()
         ip_address = data.get('ip_address')
+        reason = data.get('reason', 'manual_block')
         
         if not ip_address:
             return jsonify({'error': 'IP address is required'}), 400
         
         # Basic IP validation
-        import re
         ip_pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
         if not re.match(ip_pattern, ip_address):
             return jsonify({'error': 'Invalid IP address format'}), 400
-        
-        # Add security event
-        monitor.add_security_event(
-            event_type="ip_blocked",
-            severity="medium",
-            source_ip=ip_address,
-            target_entity="firewall",
-            description=f"IP address {ip_address} blocked by administrator",
-            action_taken="blocked"
-        )
-        
-        return jsonify({'success': True, 'message': f'IP {ip_address} blocked successfully'})
+
+        blocked_ip = monitor.block_ip_address(ip_address, reason)
+        return jsonify({
+            'success': True,
+            'message': f'IP {ip_address} blocked successfully',
+            'blocked_ip': blocked_ip
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/unblock-ip', methods=['POST'])
+def unblock_ip():
+    """API endpoint for IP unblocking."""
+    try:
+        data = request.get_json()
+        ip_address = data.get('ip_address')
+        if not ip_address:
+            return jsonify({'error': 'IP address is required'}), 400
+        if not monitor.unblock_ip_address(ip_address):
+            return jsonify({'error': 'IP address is not blocked'}), 404
+        return jsonify({'success': True, 'message': f'IP {ip_address} unblocked successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/threats')
+def get_threats():
+    """API endpoint for threat management data."""
+    try:
+        return jsonify(monitor.get_threat_summary())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -402,6 +598,7 @@ def get_network_interfaces():
         interfaces = []
         net_if_addrs = psutil.net_if_addrs()
         net_if_stats = psutil.net_if_stats()
+        net_if_counters = psutil.net_io_counters(pernic=True)
         
         for interface, addrs in net_if_addrs.items():
             stats = net_if_stats.get(interface)
@@ -413,6 +610,18 @@ def get_network_interfaces():
                     'mtu': stats.mtu,
                     'addresses': []
                 }
+                counters = net_if_counters.get(interface)
+                if counters:
+                    interface_info['traffic'] = {
+                        'bytes_sent': counters.bytes_sent,
+                        'bytes_recv': counters.bytes_recv,
+                        'packets_sent': counters.packets_sent,
+                        'packets_recv': counters.packets_recv,
+                        'bytes_sent_formatted': format_bytes(counters.bytes_sent),
+                        'bytes_recv_formatted': format_bytes(counters.bytes_recv)
+                    }
+                else:
+                    interface_info['traffic'] = None
                 
                 for addr in addrs:
                     if addr.family == socket.AF_INET:

@@ -159,21 +159,11 @@
                 <hr>
                 
                 <h6>System Status</h6>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Firewall</span>
-                    <span class="badge bg-success">Active</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Backup</span>
-                    <span class="badge bg-info">Scheduled</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Maintenance</span>
-                    <span class="badge bg-secondary">Off</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span>Security Level</span>
-                    <span class="badge bg-warning">High</span>
+                <div id="system-status">
+                    <div class="text-center text-muted py-2">
+                        <div class="loading-spinner"></div>
+                        <p class="mt-2 mb-0">Loading system status...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -377,24 +367,25 @@
     
     // Update metrics display
     function updateMetrics(data) {
+        if (!data || !performanceChart) return;
         // Update metric cards
-        document.getElementById('cpu-metric').textContent = data.cpu_percent.toFixed(1) + '%';
-        document.getElementById('cpu-progress').style.width = data.cpu_percent + '%';
+        document.getElementById('cpu-metric').textContent = safeFixed(data.cpu_percent) + '%';
+        document.getElementById('cpu-progress').style.width = (data.cpu_percent || 0) + '%';
         
-        document.getElementById('memory-metric').textContent = data.memory_percent.toFixed(1) + '%';
-        document.getElementById('memory-progress').style.width = data.memory_percent + '%';
+        document.getElementById('memory-metric').textContent = safeFixed(data.memory_percent) + '%';
+        document.getElementById('memory-progress').style.width = (data.memory_percent || 0) + '%';
         
-        document.getElementById('disk-metric').textContent = data.disk_usage.toFixed(1) + '%';
-        document.getElementById('disk-progress').style.width = data.disk_usage + '%';
+        document.getElementById('disk-metric').textContent = safeFixed(data.disk_usage) + '%';
+        document.getElementById('disk-progress').style.width = (data.disk_usage || 0) + '%';
         
-        document.getElementById('connections-metric').textContent = data.active_connections;
-        document.getElementById('uptime-metric').textContent = 'Uptime: ' + data.uptime_formatted;
+        setElementText('connections-metric', data.active_connections, '0');
+        setElementText('uptime-metric', 'Uptime: ' + (data.uptime_formatted || 'N/A'));
         
         // Update performance chart
         const now = new Date().toLocaleTimeString();
         performanceChart.data.labels.push(now);
-        performanceChart.data.datasets[0].data.push(data.cpu_percent);
-        performanceChart.data.datasets[1].data.push(data.memory_percent);
+        performanceChart.data.datasets[0].data.push(data.cpu_percent || 0);
+        performanceChart.data.datasets[1].data.push(data.memory_percent || 0);
         
         // Keep only last maxDataPoints
         if (performanceChart.data.labels.length > maxDataPoints) {
@@ -408,10 +399,11 @@
     
     // Update security overview
     function updateSecurityOverview(data) {
-        document.getElementById('total-entities').textContent = data.trust_statistics.total_entities;
-        document.getElementById('active-responses').textContent = data.active_responses.length;
-        document.getElementById('total-events').textContent = data.total_events;
-        document.getElementById('active-alerts').textContent = data.active_alerts;
+        if (!data || !riskChart) return;
+        document.getElementById('total-entities').textContent = data.trust_statistics.total_entities || 0;
+        document.getElementById('active-responses').textContent = (data.active_responses || []).length;
+        document.getElementById('total-events').textContent = data.total_events || 0;
+        document.getElementById('active-alerts').textContent = data.active_alerts || 0;
         
         // Update risk chart
         const riskDist = data.trust_statistics.risk_distribution;
@@ -424,7 +416,38 @@
         riskChart.update();
         
         // Update security events
-        updateSecurityEvents(data.recent_events);
+        updateSecurityEvents(data.recent_events || []);
+        updateSystemStatus(data);
+    }
+
+    function updateSystemStatus(data) {
+        const container = document.getElementById('system-status');
+        const averageTrust = data.trust_statistics.average_trust_score;
+        const securityLevel = Number.isFinite(averageTrust)
+            ? (averageTrust >= 80 ? 'Low Risk' : averageTrust >= 60 ? 'Moderate Risk' : 'Elevated Risk')
+            : 'No entities';
+        const securityBadge = Number.isFinite(averageTrust)
+            ? (averageTrust >= 80 ? 'success' : averageTrust >= 60 ? 'warning' : 'danger')
+            : 'secondary';
+
+        container.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>API Connection</span>
+                <span class="badge bg-success">Live</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Active Responses</span>
+                <span class="badge bg-info">${(data.active_responses || []).length}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Active Alerts</span>
+                <span class="badge bg-${data.active_alerts ? 'danger' : 'success'}">${data.active_alerts || 0}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <span>Security Level</span>
+                <span class="badge bg-${securityBadge}">${securityLevel}</span>
+            </div>
+        `;
     }
     
     // Update security events display
@@ -631,6 +654,7 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
             updateMetrics(data);
         } catch (error) {
             console.error('Failed to load system metrics:', error);
+            showNotification('System metrics are unavailable', 'warning');
         }
     }
     
@@ -640,6 +664,20 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
             updateSecurityOverview(data);
         } catch (error) {
             console.error('Failed to load security overview:', error);
+            setError('security-events', 'Unable to load security events');
+            setError('system-status', 'Unable to load system status');
+        }
+    }
+
+    async function loadDashboardState() {
+        try {
+            const data = await fetchAPI('/dashboard-state');
+            updateMetrics(data.system_metrics);
+            updateSecurityOverview(data.security_overview);
+        } catch (error) {
+            console.error('Failed to load dashboard state:', error);
+            setError('security-events', 'Unable to load dashboard data');
+            setError('system-status', 'Unable to load dashboard data');
         }
     }
     
@@ -656,8 +694,7 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         initCharts();
-        loadSystemMetrics();
-        loadSecurityOverview();
+        loadDashboardState();
         
         // Auto-refresh security overview every 30 seconds
         setInterval(loadSecurityOverview, 30000);

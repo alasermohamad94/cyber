@@ -506,15 +506,64 @@
                 alertDiv.remove();
             }, 5000);
         }
+
+        function setElementText(id, value, fallback = 'N/A') {
+            const element = document.getElementById(id);
+            if (!element) return;
+            element.textContent = value === null || value === undefined || value === '' ? fallback : value;
+        }
+
+        function setLoading(containerId, message = 'Loading data...') {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <div class="loading-spinner"></div>
+                    <p class="mt-2 mb-0">${message}</p>
+                </div>
+            `;
+        }
+
+        function setEmpty(containerId, message = 'No data available') {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-circle-info fa-2x mb-2"></i>
+                    <p class="mb-0">${message}</p>
+                </div>
+            `;
+        }
+
+        function setError(containerId, message = 'Unable to load data') {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = `
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-triangle-exclamation"></i> ${message}
+                </div>
+            `;
+        }
+
+        function safeFixed(value, digits = 1, fallback = 'N/A') {
+            const number = Number(value);
+            return Number.isFinite(number) ? number.toFixed(digits) : fallback;
+        }
         
         // API helper
         async function fetchAPI(endpoint, options = {}) {
             try {
                 const response = await fetch(`/api${endpoint}`, options);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (parseError) {
+                    payload = null;
                 }
-                return await response.json();
+                if (!response.ok) {
+                    throw new Error(payload?.error || `HTTP error! status: ${response.status}`);
+                }
+                return payload;
             } catch (error) {
                 console.error('API Error:', error);
                 showNotification(`API Error: ${error.message}`, 'danger');

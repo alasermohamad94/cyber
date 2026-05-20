@@ -32,7 +32,7 @@
                 <div class="card-body text-center">
                     <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
                     <h5 class="card-title">Active Threats</h5>
-                    <div class="metric-value" id="activeThreats">3</div>
+                    <div class="metric-value" id="activeThreats">0</div>
                     <small class="text-muted">Requiring attention</small>
                 </div>
             </div>
@@ -43,7 +43,7 @@
                 <div class="card-body text-center">
                     <i class="fas fa-ban fa-3x text-warning mb-3"></i>
                     <h5 class="card-title">Blocked IPs</h5>
-                    <div class="metric-value" id="blockedIPs">47</div>
+                    <div class="metric-value" id="blockedIPs">0</div>
                     <small class="text-muted">Currently blocked</small>
                 </div>
             </div>
@@ -54,7 +54,7 @@
                 <div class="card-body text-center">
                     <i class="fas fa-user-shield fa-3x text-info mb-3"></i>
                     <h5 class="card-title">Isolated Systems</h5>
-                    <div class="metric-value" id="isolatedSystems">2</div>
+                    <div class="metric-value" id="isolatedSystems">0</div>
                     <small class="text-muted">Under quarantine</small>
                 </div>
             </div>
@@ -65,7 +65,7 @@
                 <div class="card-body text-center">
                     <i class="fas fa-check-double fa-3x text-success mb-3"></i>
                     <h5 class="card-title">Resolved Today</h5>
-                    <div class="metric-value" id="resolvedToday">12</div>
+                    <div class="metric-value" id="resolvedToday">0</div>
                     <small class="text-muted">Successfully mitigated</small>
                 </div>
             </div>
@@ -85,60 +85,9 @@
                 </div>
                 <div class="card-body" style="max-height: 600px; overflow-y: auto;">
                     <div id="activeThreatsList">
-                        <!-- High Risk Threat -->
-                        <div class="threat-item high-risk mb-3">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <i class="fas fa-exclamation-triangle text-danger"></i>
-                                        Suspicious Login Activity
-                                    </h6>
-                                    <p class="mb-1">Multiple failed login attempts detected from IP 192.168.1.105</p>
-                                    <div class="small text-muted">
-                                        <i class="fas fa-clock"></i> 5 minutes ago
-                                        <span class="ms-3"><i class="fas fa-globe"></i> 192.168.1.105</span>
-                                    </div>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-danger">HIGH</span>
-                                    <div class="mt-2">
-                                        <button class="btn btn-sm btn-warning me-1" onclick="respondToThreat('block', '192.168.1.105')">
-                                            <i class="fas fa-ban"></i> Block
-                                        </button>
-                                        <button class="btn btn-sm btn-info" onclick="investigateThreat('login-activity')">
-                                            <i class="fas fa-search"></i> Investigate
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Medium Risk Threat -->
-                        <div class="threat-item medium-risk mb-3">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <i class="fas fa-exclamation-triangle text-warning"></i>
-                                        Unusual Network Traffic
-                                    </h6>
-                                    <p class="mb-1">High data transfer volume detected from database server</p>
-                                    <div class="small text-muted">
-                                        <i class="fas fa-clock"></i> 15 minutes ago
-                                        <span class="ms-3"><i class="fas fa-globe"></i> 10.0.0.15</span>
-                                    </div>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-warning">MEDIUM</span>
-                                    <div class="mt-2">
-                                        <button class="btn btn-sm btn-warning me-1" onclick="respondToThreat('monitor', '10.0.0.15')">
-                                            <i class="fas fa-eye"></i> Monitor
-                                        </button>
-                                        <button class="btn btn-sm btn-info" onclick="investigateThreat('network-traffic')">
-                                            <i class="fas fa-search"></i> Investigate
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="text-center text-muted py-3">
+                            <div class="loading-spinner"></div>
+                            <p class="mt-2 mb-0">Loading active threats...</p>
                         </div>
                     </div>
                 </div>
@@ -166,17 +115,9 @@
                 </div>
                 <div class="card-body">
                     <div class="timeline" id="recentActivity">
-                        <div class="timeline-item">
-                            <small class="text-muted">2 min ago</small>
-                            <div>Blocked IP: 192.168.1.105</div>
-                        </div>
-                        <div class="timeline-item">
-                            <small class="text-muted">5 min ago</small>
-                            <div>Isolated system: web-server-01</div>
-                        </div>
-                        <div class="timeline-item">
-                            <small class="text-muted">12 min ago</small>
-                            <div>Resolved: Suspicious process</div>
+                        <div class="text-center text-muted py-3">
+                            <div class="loading-spinner"></div>
+                            <p class="mt-2 mb-0">Loading activity...</p>
                         </div>
                     </div>
                 </div>
@@ -208,26 +149,7 @@
                             </thead>
                             <tbody id="blockedIPsTable">
                                 <tr>
-                                    <td>192.168.1.105</td>
-                                    <td>Brute force attack</td>
-                                    <td>2024-02-24 01:15:30</td>
-                                    <td><span class="badge bg-danger">Active</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-warning" onclick="unblockIP('192.168.1.105')">
-                                            <i class="fas fa-unlock"></i> Unblock
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>203.0.113.45</td>
-                                    <td>Port scanning</td>
-                                    <td>2024-02-24 00:45:15</td>
-                                    <td><span class="badge bg-danger">Active</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-warning" onclick="unblockIP('203.0.113.45')">
-                                            <i class="fas fa-unlock"></i> Unblock
-                                        </button>
-                                    </td>
+                                    <td colspan="5" class="text-center text-muted">Loading blocked IPs...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -293,7 +215,7 @@
             data: {
                 labels: ['High Risk', 'Medium Risk', 'Low Risk', 'Resolved'],
                 datasets: [{
-                    data: [3, 5, 8, 12],
+                    data: [0, 0, 0, 0],
                     backgroundColor: ['#dc3545', '#ffc107', '#17a2b8', '#28a745']
                 }]
             },
@@ -309,35 +231,122 @@
 
     async function loadThreatData() {
         try {
-            const data = await fetchAPI('/security-overview');
-            updateThreatMetrics(data);
+            const [overview, threats] = await Promise.all([
+                fetchAPI('/security-overview'),
+                fetchAPI('/threats')
+            ]);
+            updateThreatMetrics(overview, threats);
         } catch (error) {
             console.error('Failed to load threat data:', error);
+            setError('activeThreatsList', 'Unable to load active threats');
+            setError('recentActivity', 'Unable to load recent activity');
+            document.getElementById('blockedIPsTable').innerHTML = '<tr><td colspan="5" class="text-center text-warning">Unable to load blocked IPs</td></tr>';
         }
     }
 
-    function updateThreatMetrics(data) {
-        document.getElementById('activeThreats').textContent = data.active_responses.length;
-        document.getElementById('blockedIPs').textContent = '47';
-        document.getElementById('isolatedSystems').textContent = '2';
-        document.getElementById('resolvedToday').textContent = '12';
+    function updateThreatMetrics(data, threats) {
+        const activeThreats = threats.active_threats || [];
+        const blockedIps = threats.blocked_ips || [];
+        const isolatedSystems = threats.isolated_systems || [];
+
+        document.getElementById('activeThreats').textContent = activeThreats.length;
+        document.getElementById('blockedIPs').textContent = blockedIps.length;
+        document.getElementById('isolatedSystems').textContent = isolatedSystems.length;
+        document.getElementById('resolvedToday').textContent = threats.resolved_today || 0;
         
         const riskDist = data.trust_statistics.risk_distribution;
         threatDistributionChart.data.datasets[0].data = [
             riskDist.high || 0,
             riskDist.medium || 0,
             riskDist.low || 0,
-            12
+            threats.resolved_today || 0
         ];
         threatDistributionChart.update();
+
+        updateActiveThreats(activeThreats);
+        updateRecentActivity(threats.recent_activity || []);
+        updateBlockedIps(blockedIps);
+    }
+
+    function updateActiveThreats(threats) {
+        const container = document.getElementById('activeThreatsList');
+        if (!threats.length) {
+            setEmpty('activeThreatsList', 'No active high-risk threats');
+            return;
+        }
+
+        container.innerHTML = threats.map(threat => `
+            <div class="threat-item ${threat.severity}-risk mb-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                            ${threat.event_type}
+                        </h6>
+                        <p class="mb-1">${threat.description}</p>
+                        <div class="small text-muted">
+                            <i class="fas fa-clock"></i> ${threat.time_formatted}
+                            <span class="ms-3"><i class="fas fa-globe"></i> ${threat.source_ip}</span>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-${getSeverityBadgeClass(threat.severity)}">${threat.severity.toUpperCase()}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updateRecentActivity(activity) {
+        const container = document.getElementById('recentActivity');
+        if (!activity.length) {
+            setEmpty('recentActivity', 'No recent threat activity');
+            return;
+        }
+
+        container.innerHTML = activity.map(item => `
+            <div class="timeline-item">
+                <small class="text-muted">${item.time_formatted}</small>
+                <div>${item.description}</div>
+            </div>
+        `).join('');
+    }
+
+    function updateBlockedIps(blockedIps) {
+        const tbody = document.getElementById('blockedIPsTable');
+        if (!blockedIps.length) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No blocked IP addresses</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = blockedIps.map(item => `
+            <tr>
+                <td>${item.ip_address}</td>
+                <td>${item.reason}</td>
+                <td>${item.blocked_at_formatted}</td>
+                <td><span class="badge bg-danger">Active</span></td>
+                <td>
+                    <button class="btn btn-sm btn-warning" onclick="unblockIP('${item.ip_address}')">
+                        <i class="fas fa-unlock"></i> Unblock
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function getSeverityBadgeClass(severity) {
+        const classes = {
+            low: 'info',
+            medium: 'warning',
+            high: 'danger',
+            critical: 'dark'
+        };
+        return classes[severity] || 'secondary';
     }
 
     function scanForThreats() {
-        showNotification('Scanning for threats...', 'info');
-        setTimeout(() => {
-            showNotification('Threat scan completed. No new threats detected.', 'success');
-            loadThreatData();
-        }, 3000);
+        showNotification('Refreshing threat data from API...', 'info');
+        loadThreatData();
     }
 
     function refreshThreats() {
@@ -345,30 +354,25 @@
         loadThreatData();
     }
 
-    function respondToThreat(action, target) {
-        const actions = {
-            'block': 'Blocked',
-            'monitor': 'Monitoring',
-            'ignore': 'Ignored'
-        };
-        
-        showNotification(`${actions[action]}: ${target}`, 'warning');
-        setTimeout(() => {
-            loadThreatData();
-        }, 1000);
-    }
-
     function investigateThreat(threatId) {
         showNotification(`Investigating threat: ${threatId}`, 'info');
     }
 
-    function unblockIP(ipAddress) {
-        if (confirm(`Are you sure you want to unblock IP ${ipAddress}?`)) {
-            showNotification(`IP ${ipAddress} unblocked successfully`, 'success');
-            const row = event.target.closest('tr');
-            row.remove();
-            const blockedCount = document.getElementById('blockedIPs');
-            blockedCount.textContent = Math.max(0, parseInt(blockedCount.textContent) - 1);
+    async function unblockIP(ipAddress) {
+        if (!confirm(`Are you sure you want to unblock IP ${ipAddress}?`)) {
+            return;
+        }
+
+        try {
+            const result = await fetchAPI('/unblock-ip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip_address: ipAddress })
+            });
+            showNotification(result.message, 'success');
+            loadThreatData();
+        } catch (error) {
+            showNotification('Failed to unblock IP address', 'danger');
         }
     }
 
@@ -390,7 +394,7 @@
             const result = await fetchAPI('/block-ip', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ip_address: ipAddress })
+                body: JSON.stringify({ ip_address: ipAddress, reason: reason })
             });
             
             showNotification(`IP ${ipAddress} blocked successfully (${reason})`, 'success');
