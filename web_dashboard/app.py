@@ -256,18 +256,7 @@ class WebServerMonitor:
 
         return {
             'active_threats': [
-                {
-                    'event_id': event.event_id,
-                    'timestamp': event.timestamp,
-                    'time_formatted': datetime.fromtimestamp(event.timestamp).strftime('%H:%M:%S'),
-                    'event_type': event.event_type,
-                    'severity': event.severity,
-                    'source_ip': event.source_ip,
-                    'target_entity': event.target_entity,
-                    'description': event.description,
-                    'action_taken': event.action_taken,
-                    'status': event.status
-                }
+                serialize_security_event(event)
                 for event in active_threats[-20:]
             ],
             'blocked_ips': [
@@ -281,13 +270,7 @@ class WebServerMonitor:
             ],
             'resolved_today': resolved_today,
             'recent_activity': [
-                {
-                    'timestamp': event.timestamp,
-                    'time_formatted': datetime.fromtimestamp(event.timestamp).strftime('%H:%M:%S'),
-                    'description': event.description,
-                    'event_type': event.event_type,
-                    'severity': event.severity
-                }
+                serialize_security_event(event)
                 for event in events[-10:]
             ]
         }
@@ -319,6 +302,37 @@ def format_duration(seconds: float) -> str:
     else:
         return f"{secs}s"
 
+def serialize_metrics(metrics: ServerMetrics) -> dict:
+    """Serialize system metrics consistently for all dashboard APIs."""
+    return {
+        'cpu_percent': metrics.cpu_percent,
+        'memory_percent': metrics.memory_percent,
+        'disk_usage': metrics.disk_usage,
+        'network_io': metrics.network_io,
+        'active_connections': metrics.active_connections,
+        'system_load': metrics.system_load,
+        'uptime': metrics.uptime,
+        'timestamp': metrics.timestamp,
+        'uptime_formatted': format_duration(metrics.uptime),
+        'network_sent_formatted': format_bytes(metrics.network_io['bytes_sent']),
+        'network_recv_formatted': format_bytes(metrics.network_io['bytes_recv'])
+    }
+
+def serialize_security_event(event: SecurityEvent) -> dict:
+    """Serialize security events for dashboard views."""
+    return {
+        'event_id': event.event_id,
+        'timestamp': event.timestamp,
+        'event_type': event.event_type,
+        'severity': event.severity,
+        'source_ip': event.source_ip,
+        'target_entity': event.target_entity,
+        'description': event.description,
+        'action_taken': event.action_taken,
+        'status': event.status,
+        'time_formatted': datetime.fromtimestamp(event.timestamp).strftime('%H:%M:%S')
+    }
+
 # Routes
 @app.route('/web_dashboard')
 def index():
@@ -344,19 +358,7 @@ def settings():
 def get_system_metrics():
     """API endpoint for system metrics."""
     metrics = monitor.get_system_metrics()
-    return jsonify({
-        'cpu_percent': metrics.cpu_percent,
-        'memory_percent': metrics.memory_percent,
-        'disk_usage': metrics.disk_usage,
-        'network_io': metrics.network_io,
-        'active_connections': metrics.active_connections,
-        'system_load': metrics.system_load,
-        'uptime': metrics.uptime,
-        'timestamp': metrics.timestamp,
-        'uptime_formatted': format_duration(metrics.uptime),
-        'network_sent_formatted': format_bytes(metrics.network_io['bytes_sent']),
-        'network_recv_formatted': format_bytes(metrics.network_io['bytes_recv'])
-    })
+    return jsonify(serialize_metrics(metrics))
 
 @app.route('/api/dashboard-state')
 def get_dashboard_state():
@@ -365,19 +367,7 @@ def get_dashboard_state():
     metrics = monitor.get_system_metrics()
     security = build_security_overview()
     payload = {
-        'system_metrics': {
-            'cpu_percent': metrics.cpu_percent,
-            'memory_percent': metrics.memory_percent,
-            'disk_usage': metrics.disk_usage,
-            'network_io': metrics.network_io,
-            'active_connections': metrics.active_connections,
-            'system_load': metrics.system_load,
-            'uptime': metrics.uptime,
-            'timestamp': metrics.timestamp,
-            'uptime_formatted': format_duration(metrics.uptime),
-            'network_sent_formatted': format_bytes(metrics.network_io['bytes_sent']),
-            'network_recv_formatted': format_bytes(metrics.network_io['bytes_recv'])
-        },
+        'system_metrics': serialize_metrics(metrics),
         'security_overview': security,
         'metrics_history': monitor.get_metrics_history(),
         'api_latency_ms': round((time.time() - start) * 1000, 2)
@@ -394,17 +384,7 @@ def build_security_overview() -> dict:
         'total_events': len(monitor.security_events),
         'active_alerts': len(monitor.alerts),
         'recent_events': [
-            {
-                'event_id': event.event_id,
-                'timestamp': event.timestamp,
-                'event_type': event.event_type,
-                'severity': event.severity,
-                'source_ip': event.source_ip,
-                'target_entity': event.target_entity,
-                'description': event.description,
-                'action_taken': event.action_taken,
-                'time_formatted': datetime.fromtimestamp(event.timestamp).strftime('%H:%M:%S')
-            }
+            serialize_security_event(event)
             for event in list(monitor.security_events)[-10:]
         ]
     }
