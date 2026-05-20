@@ -294,6 +294,7 @@
     let performanceChart;
     let riskChart;
     const maxDataPoints = 20;
+    let pendingMetricsFrame = null;
     
     // Initialize charts
     function initCharts() {
@@ -699,7 +700,13 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
     
     // Socket.IO event handlers
     socket.on('metrics_update', function(data) {
-        updateMetrics(data);
+        if (pendingMetricsFrame) {
+            cancelAnimationFrame(pendingMetricsFrame);
+        }
+        pendingMetricsFrame = requestAnimationFrame(() => {
+            updateMetrics(data);
+            pendingMetricsFrame = null;
+        });
     });
     
     socket.on('security_alert', function(data) {

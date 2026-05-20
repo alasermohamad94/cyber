@@ -203,6 +203,7 @@
     let resourceDistributionChart;
     let securityEventsChart;
     let threatAnalysisChart;
+    let lastRealtimeAnalyticsRefresh = 0;
 
     document.addEventListener('DOMContentLoaded', function() {
         initializeCharts();
@@ -499,6 +500,11 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
     }
 
     socket.on('metrics_update', function(data) {
+        const now = Date.now();
+        if (now - lastRealtimeAnalyticsRefresh < 5000) {
+            return;
+        }
+        lastRealtimeAnalyticsRefresh = now;
         loadAnalyticsSummary();
     });
 </script>

@@ -427,8 +427,37 @@
     
     <!-- Common JavaScript -->
     <script>
-        // Initialize Socket.IO
-        const socket = io();
+        window.addEventListener('error', function(event) {
+            console.error('Dashboard runtime error:', event.error || event.message);
+            showNotification('A dashboard component failed to render. The rest of the page is still available.', 'warning');
+        });
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled dashboard promise rejection:', event.reason);
+            showNotification('A dashboard request failed unexpectedly.', 'warning');
+        });
+
+        // Initialize Socket.IO defensively so the dashboard can still work over REST.
+        let socket = {
+            on: function() {},
+            emit: function() {}
+        };
+
+        if (window.io) {
+            try {
+                socket = io({
+                    reconnection: true,
+                    reconnectionAttempts: 10,
+                    reconnectionDelay: 1000,
+                    timeout: 5000
+                });
+            } catch (error) {
+                console.error('Socket initialization failed:', error);
+                updateConnectionStatus(false);
+            }
+        } else {
+            updateConnectionStatus(false);
+        }
         
         // Connection status
         socket.on('connect', function() {
@@ -440,10 +469,27 @@
             console.log('Disconnected from server');
             updateConnectionStatus(false);
         });
+
+        socket.on('connect_error', function(error) {
+            console.error('Realtime connection error:', error);
+            updateConnectionStatus(false);
+        });
+
+        socket.on('reconnect_attempt', function() {
+            const status = document.getElementById('connection-status');
+            const indicator = document.getElementById('connection-indicator');
+            if (status) status.textContent = 'Reconnecting';
+            if (indicator) {
+                indicator.className = 'connection-status disconnected';
+                indicator.innerHTML = '<i class="fas fa-rotate"></i> Reconnecting';
+            }
+        });
         
         function updateConnectionStatus(connected) {
             const indicator = document.getElementById('connection-indicator');
             const status = document.getElementById('connection-status');
+
+            if (!indicator || !status) return;
             
             if (connected) {
                 indicator.className = 'connection-status connected';
