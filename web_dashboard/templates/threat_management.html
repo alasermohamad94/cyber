@@ -190,7 +190,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning" onclick="blockIP()">
+                <button type="button" class="btn btn-warning" id="threatBlockIpButton" onclick="blockIP()">
                     <i class="fas fa-ban"></i> Block IP
                 </button>
             </div>
@@ -382,6 +382,7 @@
     }
 
     async function blockIP() {
+        const button = document.getElementById('threatBlockIpButton');
         const ipAddress = document.getElementById('ipAddress').value;
         const reason = document.getElementById('blockReason').value;
         
@@ -391,6 +392,8 @@
         }
         
         try {
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Blocking';
             const result = await fetchAPI('/block-ip', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -403,6 +406,9 @@
             loadThreatData();
         } catch (error) {
             showNotification('Failed to block IP address', 'danger');
+        } finally {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-ban"></i> Block IP';
         }
     }
 

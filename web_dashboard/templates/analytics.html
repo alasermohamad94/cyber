@@ -375,11 +375,20 @@
     }
 
     async function loadProcesses() {
+        document.getElementById('topProcesses').innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center">
+                    <div class="spinner-border spinner-border-sm me-2"></div>
+                    Loading processes...
+                </td>
+            </tr>
+        `;
         try {
             const data = await fetchAPI('/processes');
             updateProcessesTable(data.processes);
         } catch (error) {
             console.error('Failed to load processes:', error);
+            document.getElementById('topProcesses').innerHTML = '<tr><td colspan="4" class="text-center text-warning">Unable to load process data</td></tr>';
         }
     }
 
@@ -416,11 +425,20 @@
     }
 
     async function loadNetworkInterfaces() {
+        document.getElementById('networkInterfaces').innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center">
+                    <div class="spinner-border spinner-border-sm me-2"></div>
+                    Loading interfaces...
+                </td>
+            </tr>
+        `;
         try {
             const data = await fetchAPI('/network-interfaces');
             updateNetworkTable(data.interfaces);
         } catch (error) {
             console.error('Failed to load network interfaces:', error);
+            document.getElementById('networkInterfaces').innerHTML = '<tr><td colspan="4" class="text-center text-warning">Unable to load network interfaces</td></tr>';
         }
     }
 
