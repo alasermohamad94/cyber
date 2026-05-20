@@ -530,7 +530,7 @@
         try {
             button.disabled = true;
             button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyzing';
-            const result = await fetchAPI('/analyze-entity', {
+            const result = await fetchEndpoint('analyzeEntity', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -595,7 +595,7 @@
         try {
             button.disabled = true;
             button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Blocking';
-            const result = await fetchAPI('/block-ip', {
+            const result = await fetchEndpoint('blockIp', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -623,7 +623,7 @@
     async function generateSecurityReport() {
         try {
             showNotification('Generating security report...', 'info');
-            const report = await fetchAPI('/security-report');
+            const report = await fetchEndpoint('securityReport');
             
             // Create downloadable report
             const reportContent = `
@@ -667,7 +667,7 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
     // Load initial data
     async function loadSystemMetrics() {
         try {
-            const data = await fetchAPI('/system-metrics');
+            const data = await fetchEndpoint('systemMetrics');
             updateMetrics(data);
         } catch (error) {
             console.error('Failed to load system metrics:', error);
@@ -677,7 +677,7 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
     
     async function loadSecurityOverview() {
         try {
-            const data = await fetchAPI('/security-overview');
+            const data = await fetchEndpoint('securityOverview');
             updateSecurityOverview(data);
         } catch (error) {
             console.error('Failed to load security overview:', error);
@@ -688,7 +688,7 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
 
     async function loadDashboardState() {
         try {
-            const data = await fetchAPI('/dashboard-state');
+            const data = await fetchEndpoint('dashboardState');
             updateMetrics(data.system_metrics);
             updateSecurityOverview(data.security_overview);
         } catch (error) {

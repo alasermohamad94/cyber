@@ -324,7 +324,7 @@
 
     async function loadAnalyticsSummary() {
         try {
-            const data = await fetchAPI('/analytics-data');
+            const data = await fetchEndpoint('analyticsData');
             updateAnalytics(data);
         } catch (error) {
             console.error('Failed to load analytics summary:', error);
@@ -385,7 +385,7 @@
             </tr>
         `;
         try {
-            const data = await fetchAPI('/processes');
+            const data = await fetchEndpoint('processes');
             updateProcessesTable(data.processes);
         } catch (error) {
             console.error('Failed to load processes:', error);
@@ -435,7 +435,7 @@
             </tr>
         `;
         try {
-            const data = await fetchAPI('/network-interfaces');
+            const data = await fetchEndpoint('networkInterfaces');
             updateNetworkTable(data.interfaces);
         } catch (error) {
             console.error('Failed to load network interfaces:', error);
@@ -469,7 +469,7 @@
         showNotification('Generating analytics report...', 'info');
         
         try {
-            const report = await fetchAPI('/security-report');
+            const report = await fetchEndpoint('securityReport');
             
             const reportContent = `
 Cyber Defense System - Analytics Report

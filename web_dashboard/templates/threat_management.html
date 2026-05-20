@@ -232,8 +232,8 @@
     async function loadThreatData() {
         try {
             const [overview, threats] = await Promise.all([
-                fetchAPI('/security-overview'),
-                fetchAPI('/threats')
+                fetchEndpoint('securityOverview'),
+                fetchEndpoint('threats')
             ]);
             updateThreatMetrics(overview, threats);
         } catch (error) {
@@ -364,7 +364,7 @@
         }
 
         try {
-            const result = await fetchAPI('/unblock-ip', {
+            const result = await fetchEndpoint('unblockIp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ip_address: ipAddress })
@@ -394,7 +394,7 @@
         try {
             button.disabled = true;
             button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Blocking';
-            const result = await fetchAPI('/block-ip', {
+            const result = await fetchEndpoint('blockIp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ip_address: ipAddress, reason: reason })

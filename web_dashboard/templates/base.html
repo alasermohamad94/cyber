@@ -596,6 +596,20 @@
             return Number.isFinite(number) ? number.toFixed(digits) : fallback;
         }
         
+        const API_ENDPOINTS = Object.freeze({
+            analyticsData: '/analytics-data',
+            analyzeEntity: '/analyze-entity',
+            blockIp: '/block-ip',
+            dashboardState: '/dashboard-state',
+            networkInterfaces: '/network-interfaces',
+            processes: '/processes',
+            securityOverview: '/security-overview',
+            securityReport: '/security-report',
+            systemMetrics: '/system-metrics',
+            threats: '/threats',
+            unblockIp: '/unblock-ip'
+        });
+
         // API helper
         async function fetchAPI(endpoint, options = {}) {
             try {
@@ -615,6 +629,14 @@
                 showNotification(`API Error: ${error.message}`, 'danger');
                 throw error;
             }
+        }
+
+        function fetchEndpoint(name, options = {}) {
+            const endpoint = API_ENDPOINTS[name];
+            if (!endpoint) {
+                throw new Error(`Unknown API endpoint: ${name}`);
+            }
+            return fetchAPI(endpoint, options);
         }
     </script>
     
