@@ -17,6 +17,7 @@ from prediction.attack_prediction import predict_attack, AttackPrediction
 
 # Import empty modules (we'll implement basic functionality)
 from decision_engine.descision_engine import make_decision
+from prediction.model_inference import build_feature_vector, shadow_predict
 from response.engine import execute_response
 from trust_system.trust_manager import update_trust_score
 
@@ -56,6 +57,16 @@ class CyberDefenseSystem:
         print(f"   Current Stage: {attack_prediction.current_stage}")
         print(f"   Next Stage: {attack_prediction.next_stage}")
         print(f"   Confidence: {attack_prediction.confidence:.2f}")
+
+        # Step 2b: ML shadow inference (advisory; does not replace rules)
+        ml_advisory = shadow_predict({
+            "entity_data": entity_data,
+            "behavior_score": behavior_profile.behavior_score,
+            "feature_vector": build_feature_vector(entity_data, behavior_profile.behavior_score),
+        })
+        if ml_advisory.get("enabled"):
+            print(f"[ML Shadow] {ml_advisory.get('anomaly_label')} "
+                  f"advisory={ml_advisory.get('advisory_score'):.1f}")
         
         # Step 3: Trust System - Update trust score
         print("[Trust System] Updating trust score...")
@@ -66,7 +77,7 @@ class CyberDefenseSystem:
         
         # Step 4: Decision Engine - Make security decision
         print("[Decision Engine] Making security decision...")
-        decision = make_decision(behavior_profile, attack_prediction, new_trust)
+        decision = make_decision(behavior_profile, attack_prediction, new_trust, ml_advisory)
         print(f"   Decision: {decision['action']}")
         print(f"   Severity: {decision['severity']}")
         
@@ -93,6 +104,7 @@ class CyberDefenseSystem:
             'attack_prediction': asdict(attack_prediction),
             'trust_score': new_trust,
             'decision': decision,
+            'ml_advisory': ml_advisory,
             'response': response_result,
             'status': 'analyzed'
         }

@@ -14,121 +14,20 @@
     <!-- Socket.IO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     
-    <!-- Forest Theme CSS -->
     <link href="{{ url_for('static', filename='css/forest_theme.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/dashboard-ui.css') }}" rel="stylesheet">
     
     <style>
-        /* Override Bootstrap with forest theme */
         .navbar {
             background: rgba(0, 38, 35, 0.95) !important;
             backdrop-filter: blur(10px);
             border-bottom: 2px solid #4a151e;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
         }
 
         .navbar-brand {
             font-weight: bold;
-            color: #b9a779 !important;
             font-size: 1.5rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #002623 0%, #054239 100%);
-            border: none;
-            color: #ffffff;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #988561 0%, #6b1f2a 100%);
-            border: none;
-            color: #ffffff;
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #b9a779 0%, #988561 100%);
-            border: none;
-            color: #002623;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #4a151e 0%, #260f14 100%);
-            border: none;
-            color: #ffffff;
-        }
-
-        .alert-success {
-            background: rgba(152, 133, 97, 0.1);
-            border-left: 5px solid #988561;
-            color: #002623;
-        }
-
-        .alert-warning {
-            background: rgba(185, 167, 121, 0.1);
-            border-left: 5px solid #b9a779;
-            color: #002623;
-        }
-
-        .alert-danger {
-            background: rgba(107, 31, 42, 0.1);
-            border-left: 5px solid #6b1f2a;
-            color: #ffffff;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid #054239;
-            box-shadow: 0 8px 32px rgba(0, 38, 35, 0.3);
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, #002623 0%, #054239 100%);
-            color: #ffffff;
-            border-bottom: 3px solid #4a151e;
-        }
-
-        .table {
-            background: rgba(255, 255, 255, 0.95);
-            color: #161616;
-        }
-
-        .table th {
-            background: linear-gradient(135deg, #002623 0%, #054239 100%);
-            color: #ffffff;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .status-healthy {
-            background: #988561;
-            box-shadow: 0 0 10px #988561;
-        }
-
-        .status-warning {
-            background: #b9a779;
-            box-shadow: 0 0 10px #b9a779;
-        }
-
-        .status-critical {
-            background: #4a151e;
-            box-shadow: 0 0 10px #4a151e;
-        }
-
-        .nav-link {
-            color: #fff !important;
-            transition: all 0.3s ease;
-            border-radius: 5px;
-            margin: 0 5px;
-        }
-
-        .nav-link:hover, .nav-link.active {
-            background: var(--accent-color);
-            transform: translateY(-2px);
         }
 
         .main-container {
@@ -137,46 +36,23 @@
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: none;
             border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 32px rgba(0, 38, 35, 0.15);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 38, 35, 0.2);
         }
 
         .card-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
             border-radius: 15px 15px 0 0 !important;
-            font-weight: bold;
-            border: none;
+            font-weight: 600;
         }
 
         .metric-card {
             text-align: center;
-            padding: 20px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .metric-value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-            margin: 10px 0;
-        }
-
-        .metric-label {
-            color: #6c757d;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .status-indicator {
@@ -188,14 +64,13 @@
             animation: pulse 2s infinite;
         }
 
-        .status-online { background: var(--success-color); }
-        .status-warning { background: var(--warning-color); }
-        .status-danger { background: var(--danger-color); }
+        .status-online { background: #2d6a4f; }
+        .status-warning { background: #b9a779; }
+        .status-danger { background: #6b1f2a; }
 
         @keyframes pulse {
-            0% { opacity: 1; }
+            0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
-            100% { opacity: 1; }
         }
 
         .progress {
@@ -204,59 +79,18 @@
             background: #e9ecef;
         }
 
-        .progress-bar {
-            border-radius: 4px;
-            transition: width 0.6s ease;
-        }
-
-        .alert {
-            border: none;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-        }
-
-        .btn {
-            border-radius: 8px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            border: none;
-        }
-
-        .btn-primary {
-            background: var(--accent-color);
-            border-color: var(--accent-color);
-        }
-
-        .btn-primary:hover {
-            background: #d63850;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-        }
-
-        .table {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .table thead {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-        }
-
         .loading-spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid var(--accent-color);
+            border: 3px solid #e9ecef;
+            border-top: 3px solid #054239;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            to { transform: rotate(360deg); }
         }
 
         .chart-container {
@@ -270,13 +104,12 @@
             padding: 10px;
             margin: 5px 0;
             border-radius: 5px;
-            background: rgba(255, 255, 255, 0.9);
         }
 
-        .security-event.low { border-left-color: var(--info-color); }
-        .security-event.medium { border-left-color: var(--warning-color); }
-        .security-event.high { border-left-color: var(--danger-color); }
-        .security-event.critical { border-left-color: #721c24; }
+        .security-event.low { border-left-color: #054239; }
+        .security-event.medium { border-left-color: #b9a779; }
+        .security-event.high { border-left-color: #6b1f2a; }
+        .security-event.critical { border-left-color: #4a151e; }
 
         .connection-status {
             position: fixed;
@@ -286,75 +119,7 @@
             padding: 10px 15px;
             border-radius: 20px;
             font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .connection-status.connected {
-            background: var(--success-color);
-            color: white;
-        }
-
-        .connection-status.disconnected {
-            background: var(--danger-color);
-            color: white;
-        }
-
-        .entity-analysis-form {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
-        }
-
-        .form-control, .form-select {
-            border-radius: 8px;
-            border: 2px solid #e9ecef;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 0.2rem rgba(233, 69, 96, 0.25);
-        }
-
-        .sidebar {
-            background: rgba(26, 26, 46, 0.95);
-            min-height: calc(100vh - 76px);
-            border-radius: 0 15px 15px 0;
-            padding: 20px;
-        }
-
-        .sidebar .nav-link {
-            color: #fff !important;
-            padding: 12px 20px;
-            margin: 5px 0;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .sidebar .nav-link:hover {
-            background: var(--accent-color);
-            transform: translateX(5px);
-        }
-
-        .sidebar .nav-link.active {
-            background: var(--accent-color);
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                min-height: auto;
-                margin-bottom: 20px;
-            }
-            
-            .metric-value {
-                font-size: 2rem;
-            }
-            
-            .main-container {
-                padding: 10px;
-            }
+            font-weight: 600;
         }
 
         .fade-in {
@@ -364,6 +129,11 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .main-container { padding: 10px; }
+            .metric-value { font-size: 2rem; }
         }
     </style>
 </head>
@@ -406,6 +176,11 @@
                             <span class="status-indicator status-online"></span>
                             <span id="connection-status">Connected</span>
                         </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
                     </li>
                 </ul>
             </div>
@@ -510,14 +285,23 @@
         // API helper
         async function fetchAPI(endpoint, options = {}) {
             try {
-                const response = await fetch(`/api${endpoint}`, options);
+                const response = await fetch(`/api${endpoint}`, {
+                    ...options,
+                    credentials: 'same-origin'
+                });
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    throw new Error('Authentication required');
+                }
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 return await response.json();
             } catch (error) {
                 console.error('API Error:', error);
-                showNotification(`API Error: ${error.message}`, 'danger');
+                if (!error.message.includes('Authentication')) {
+                    showNotification(`API Error: ${error.message}`, 'danger');
+                }
                 throw error;
             }
         }

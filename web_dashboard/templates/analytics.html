@@ -210,23 +210,22 @@
     });
 
     function initializeCharts() {
-        // Performance Trends
         const perfCtx = document.getElementById('performanceTrendsChart').getContext('2d');
         performanceTrendsChart = new Chart(perfCtx, {
             type: 'line',
             data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                labels: [],
                 datasets: [
                     {
                         label: 'CPU %',
-                        data: [45, 52, 48, 65, 58, 62, 55],
+                        data: [],
                         borderColor: '#007bff',
                         backgroundColor: 'rgba(0, 123, 255, 0.1)',
                         tension: 0.4
                     },
                     {
                         label: 'Memory %',
-                        data: [68, 72, 70, 75, 78, 74, 71],
+                        data: [],
                         borderColor: '#28a745',
                         backgroundColor: 'rgba(40, 167, 69, 0.1)',
                         tension: 0.4
@@ -247,9 +246,9 @@
         resourceDistributionChart = new Chart(resourceCtx, {
             type: 'doughnut',
             data: {
-                labels: ['CPU', 'Memory', 'Disk I/O', 'Network'],
+                labels: ['CPU', 'Memory', 'Disk', 'Network load'],
                 datasets: [{
-                    data: [25, 35, 20, 20],
+                    data: [0, 0, 0, 0],
                     backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545']
                 }]
             },
@@ -267,22 +266,12 @@
         securityEventsChart = new Chart(securityCtx, {
             type: 'bar',
             data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                labels: ['Low', 'Medium', 'High', 'Critical'],
                 datasets: [
                     {
-                        label: 'Low Risk',
-                        data: [12, 19, 15, 25, 22, 30, 28],
-                        backgroundColor: '#17a2b8'
-                    },
-                    {
-                        label: 'Medium Risk',
-                        data: [8, 11, 13, 9, 12, 8, 10],
-                        backgroundColor: '#ffc107'
-                    },
-                    {
-                        label: 'High Risk',
-                        data: [3, 5, 2, 4, 3, 2, 1],
-                        backgroundColor: '#dc3545'
+                        label: 'Events (24h)',
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#17a2b8', '#ffc107', '#fd7e14', '#dc3545']
                     }
                 ]
             },
@@ -290,8 +279,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    x: { stacked: true },
-                    y: { stacked: true }
+                    y: { beginAtZero: true }
                 }
             }
         });
@@ -301,10 +289,10 @@
         threatAnalysisChart = new Chart(threatCtx, {
             type: 'radar',
             data: {
-                labels: ['Network', 'System', 'Application', 'Data', 'User'],
+                labels: ['Low', 'Medium', 'High', 'Critical'],
                 datasets: [{
-                    label: 'Threat Level',
-                    data: [65, 59, 90, 81, 56],
+                    label: 'Entity risk (trust)',
+                    data: [0, 0, 0, 0],
                     borderColor: '#dc3545',
                     backgroundColor: 'rgba(220, 53, 69, 0.2)'
                 }]
@@ -321,38 +309,48 @@
 
     async function loadAnalyticsData() {
         try {
-            await Promise.all([
-                loadSystemMetrics(),
-                loadProcesses(),
-                loadNetworkInterfaces()
-            ]);
+            const overview = await fetchAPI('/analytics-overview');
+            updateFromOverview(overview);
+            await Promise.all([loadProcesses(), loadNetworkInterfaces()]);
         } catch (error) {
             console.error('Failed to load analytics data:', error);
-            showNotification('Failed to load analytics data', 'danger');
         }
     }
 
-    async function loadSystemMetrics() {
-        try {
-            const data = await fetchAPI('/system-metrics');
-            updateMetrics(data);
-        } catch (error) {
-            console.error('Failed to load system metrics:', error);
-        }
-    }
+    function updateFromOverview(data) {
+        document.getElementById('healthScore').textContent = data.health_score + '%';
+        document.querySelector('#healthScore').parentElement.querySelector('.progress-bar').style.width = data.health_score + '%';
 
-    function updateMetrics(data) {
-        const healthScore = Math.max(85, 100 - data.cpu_percent - (data.memory_percent - 50));
-        document.getElementById('healthScore').textContent = healthScore.toFixed(0) + '%';
-        
-        const responseTime = (1 + Math.random() * 2).toFixed(1);
-        document.getElementById('responseTime').textContent = responseTime + 's';
-        
-        const detectionRate = Math.min(99, 90 + data.active_connections / 10);
-        document.getElementById('detectionRate').textContent = detectionRate.toFixed(0) + '%';
-        
-        const efficiency = Math.max(70, 100 - (data.cpu_percent + data.memory_percent) / 2);
-        document.getElementById('efficiency').textContent = efficiency.toFixed(0) + '%';
+        const active = data.response_summary.active_responses || 0;
+        document.getElementById('responseTime').textContent = active + ' active';
+        document.getElementById('detectionRate').textContent = (data.trust_statistics.total_entities || 0) + ' entities';
+        document.getElementById('efficiency').textContent = data.efficiency + '%';
+
+        const hist = data.performance_history;
+        if (hist.labels.length) {
+            performanceTrendsChart.data.labels = hist.labels;
+            performanceTrendsChart.data.datasets[0].data = hist.cpu;
+            performanceTrendsChart.data.datasets[1].data = hist.memory;
+            performanceTrendsChart.update();
+        }
+
+        const dist = data.resource_distribution;
+        resourceDistributionChart.data.datasets[0].data = [
+            dist.cpu, dist.memory, dist.disk, dist.network
+        ];
+        resourceDistributionChart.update();
+
+        const ev = data.events_by_severity;
+        securityEventsChart.data.datasets[0].data = [
+            ev.low || 0, ev.medium || 0, ev.high || 0, ev.critical || 0
+        ];
+        securityEventsChart.update();
+
+        const risk = data.trust_statistics.risk_distribution || {};
+        threatAnalysisChart.data.datasets[0].data = [
+            risk.low || 0, risk.medium || 0, risk.high || 0, risk.critical || 0
+        ];
+        threatAnalysisChart.update();
     }
 
     async function loadProcesses() {
@@ -422,7 +420,7 @@
                     </span>
                 </td>
                 <td>${interface.speed ? interface.speed + ' Mbps' : 'Unknown'}</td>
-                <td>${formatBytes(Math.random() * 1000000000)}/s</td>
+                <td>${formatBytes(interface.bytes_sent + interface.bytes_recv)} total</td>
             </tr>
         `).join('');
     }
@@ -461,8 +459,8 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
         }
     }
 
-    socket.on('metrics_update', function(data) {
-        updateMetrics(data);
+    socket.on('metrics_update', function() {
+        loadAnalyticsData();
     });
 </script>
 
@@ -478,7 +476,7 @@ ${report.recommendations.map(r => `- ${r}`).join('\n')}
 .metric-value {
     font-size: 2.5rem;
     font-weight: bold;
-    color: var(--primary-color);
+    color: #002623;
 }
 
 .chart-container {

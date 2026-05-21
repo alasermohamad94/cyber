@@ -5,11 +5,14 @@ This module implements automated response actions for the cyber defense system.
 It executes security decisions made by the decision engine.
 """
 
+import threading
 import time
 import random
 from typing import Dict, Any, List
 from dataclasses import dataclass
 from enum import Enum
+
+from storage.persistence import get_store
 
 
 class ResponseStatus(Enum):
@@ -75,6 +78,29 @@ class ResponseExecutor:
     def __init__(self):
         self.active_responses: Dict[str, ResponseAction] = {}
         self.response_history: List[ResponseAction] = []
+        self._lock = threading.RLock()
+        self._store = get_store()
+        self._load_from_store()
+
+    def _load_from_store(self) -> None:
+        for row in self._store.list_responses_by_status(
+            [s.value for s in ResponseStatus], limit=500
+        ):
+            action = ResponseAction(
+                action_id=row["action_id"],
+                entity_id=row["entity_id"],
+                action_type=row["action_type"],
+                status=ResponseStatus(row["status"]),
+                timestamp=row["timestamp"],
+                completion_time=row.get("completion_time") or 0.0,
+                details=row.get("details", {}),
+            )
+            self.response_history.append(action)
+            if action.status in (ResponseStatus.PENDING, ResponseStatus.EXECUTING):
+                self.active_responses[action.action_id] = action
+
+    def _persist_action(self, action: ResponseAction) -> None:
+        self._store.save_response_action(action.to_dict())
         
     def _generate_action_id(self) -> str:
         """Generate a unique action ID."""
@@ -139,6 +165,10 @@ class ResponseExecutor:
         Returns:
             Response result dictionary
         """
+        with self._lock:
+            return self._execute_action_locked(entity_id, decision)
+
+    def _execute_action_locked(self, entity_id: str, decision: Dict[str, Any]) -> Dict[str, Any]:
         action_type = decision.get('action', 'monitor')
         severity = decision.get('severity', 'low')
         
@@ -157,7 +187,8 @@ class ResponseExecutor:
         )
         
         self.active_responses[action_id] = response_action
-        
+        self._persist_action(response_action)
+
         try:
             # Execute the appropriate action
             if action_type == 'monitor':
@@ -183,9 +214,9 @@ class ResponseExecutor:
                 details=decision.copy()
             )
             
-            # Update records
-            self.active_responses[action_id] = completed_action
             self.response_history.append(completed_action)
+            self.active_responses.pop(action_id, None)
+            self._persist_action(completed_action)
             
             # Add execution details to result
             result.update({
@@ -210,8 +241,9 @@ class ResponseExecutor:
                 details={**decision, 'error': str(e)}
             )
             
-            self.active_responses[action_id] = failed_action
+            self.active_responses.pop(action_id, None)
             self.response_history.append(failed_action)
+            self._persist_action(failed_action)
             
             return {
                 'action_id': action_id,
@@ -224,15 +256,54 @@ class ResponseExecutor:
     
     def get_active_responses(self) -> List[Dict[str, Any]]:
         """Get list of currently active responses."""
-        return [action.to_dict() for action in self.active_responses.values()
-                if action.status in [ResponseStatus.PENDING, ResponseStatus.EXECUTING]]
-    
+        with self._lock:
+            return [
+                action.to_dict() for action in self.active_responses.values()
+                if action.status in [ResponseStatus.PENDING, ResponseStatus.EXECUTING]
+            ]
+
+    def get_recent_responses(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Recently completed or failed responses for dashboards."""
+        with self._lock:
+            recent = [
+                a for a in self.response_history
+                if a.status in (ResponseStatus.COMPLETED, ResponseStatus.FAILED, ResponseStatus.CANCELLED)
+            ]
+            return [action.to_dict() for action in recent[-limit:]]
+
+    def get_response_summary(self) -> Dict[str, Any]:
+        """Counts for threat/analytics views."""
+        with self._lock:
+            now = time.time()
+            day_start = now - 86400
+            active = len(self.active_responses)
+            isolated = sum(
+                1 for a in self.response_history
+                if a.action_type == "isolate"
+                and a.status == ResponseStatus.COMPLETED
+                and a.timestamp >= day_start
+            )
+            resolved_today = sum(
+                1 for a in self.response_history
+                if a.status == ResponseStatus.COMPLETED and a.timestamp >= day_start
+            )
+            return {
+                "active_responses": active,
+                "isolated_systems": isolated,
+                "resolved_today": resolved_today,
+            }
+
     def get_response_history(self, limit: int = 100) -> List[Dict[str, Any]]:
         """Get response history."""
-        return [action.to_dict() for action in self.response_history[-limit:]]
+        with self._lock:
+            return [action.to_dict() for action in self.response_history[-limit:]]
     
     def cancel_response(self, action_id: str) -> Dict[str, Any]:
         """Cancel an active response."""
+        with self._lock:
+            return self._cancel_response_locked(action_id)
+
+    def _cancel_response_locked(self, action_id: str) -> Dict[str, Any]:
         if action_id not in self.active_responses:
             return {
                 'status': 'failed',
@@ -257,9 +328,10 @@ class ResponseExecutor:
             details=action.details
         )
         
-        self.active_responses[action_id] = cancelled_action
+        self.active_responses.pop(action_id, None)
         self.response_history.append(cancelled_action)
-        
+        self._persist_action(cancelled_action)
+
         return {
             'status': 'completed',
             'message': f"Action {action_id} cancelled successfully"
@@ -296,6 +368,16 @@ def get_response_history(limit: int = 100) -> List[Dict[str, Any]]:
     return _response_executor.get_response_history(limit)
 
 
+def get_recent_responses(limit: int = 50) -> List[Dict[str, Any]]:
+    """Get recently finished response actions."""
+    return _response_executor.get_recent_responses(limit)
+
+
+def get_response_summary() -> Dict[str, Any]:
+    """Get aggregated response counters."""
+    return _response_executor.get_response_summary()
+
+
 def cancel_response(action_id: str) -> Dict[str, Any]:
     """Cancel an active response action."""
     return _response_executor.cancel_response(action_id)
@@ -303,5 +385,6 @@ def cancel_response(action_id: str) -> Dict[str, Any]:
 
 __all__ = [
     "ResponseAction", "ResponseStatus", "ResponseExecutor",
-    "execute_response", "get_active_responses", "get_response_history", "cancel_response"
+    "execute_response", "get_active_responses", "get_recent_responses",
+    "get_response_summary", "get_response_history", "cancel_response"
 ]

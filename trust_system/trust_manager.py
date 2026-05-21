@@ -5,10 +5,12 @@ This module manages trust scores for entities in the cyber defense system.
 Trust scores are updated based on behavior analysis and historical patterns.
 """
 
+import threading
 import time
-import math
 from typing import Dict, Any, List
 from dataclasses import dataclass
+
+from storage.persistence import get_store
 
 
 @dataclass(frozen=True)
@@ -63,10 +65,24 @@ class TrustManager:
     
     def __init__(self):
         self.trust_records: Dict[str, TrustRecord] = {}
+        self._lock = threading.RLock()
+        self._store = get_store()
         self.max_history_length = 20
         self.decay_rate = 0.95  # Daily decay factor
         self.positive_boost = 2.0  # Trust boost for good behavior
         self.negative_penalty = 5.0  # Trust penalty for bad behavior
+        self._load_from_store()
+
+    def _load_from_store(self) -> None:
+        for record in self._store.load_all_trust_records():
+            self.trust_records[record["entity_id"]] = TrustRecord(
+                entity_id=record["entity_id"],
+                trust_score=record["trust_score"],
+                last_updated=record["last_updated"],
+                behavior_history=record.get("behavior_history", []),
+                trust_trend=record.get("trust_trend", "stable"),
+                risk_level=record.get("risk_level", "low"),
+            )
         
     def _calculate_risk_level(self, trust_score: float) -> str:
         """
@@ -191,6 +207,14 @@ class TrustManager:
         Returns:
             Updated trust score
         """
+        with self._lock:
+            return self._update_trust_score_locked(
+                entity_id, behavior_score, current_trust
+            )
+
+    def _update_trust_score_locked(
+        self, entity_id: str, behavior_score: float, current_trust: float = None
+    ) -> float:
         current_time = time.time()
         
         # Get current trust score
@@ -243,9 +267,10 @@ class TrustManager:
         )
         
         self.trust_records[entity_id] = trust_record
-        
+        self._store.save_trust_record(trust_record.to_dict())
+
         return new_trust
-    
+
     def get_trust_record(self, entity_id: str) -> Dict[str, Any]:
         """
         Get trust record for an entity.
@@ -256,14 +281,15 @@ class TrustManager:
         Returns:
             Trust record dictionary or None if not found
         """
-        if entity_id not in self.trust_records:
-            return None
-        
-        return self.trust_records[entity_id].to_dict()
-    
+        with self._lock:
+            if entity_id not in self.trust_records:
+                return None
+            return self.trust_records[entity_id].to_dict()
+
     def get_all_trust_records(self) -> List[Dict[str, Any]]:
         """Get all trust records."""
-        return [record.to_dict() for record in self.trust_records.values()]
+        with self._lock:
+            return [record.to_dict() for record in self.trust_records.values()]
     
     def get_entities_by_risk_level(self, risk_level: str) -> List[str]:
         """
@@ -275,10 +301,11 @@ class TrustManager:
         Returns:
             List of entity IDs with the specified risk level
         """
-        return [
-            entity_id for entity_id, record in self.trust_records.items()
-            if record.risk_level == risk_level
-        ]
+        with self._lock:
+            return [
+                entity_id for entity_id, record in self.trust_records.items()
+                if record.risk_level == risk_level
+            ]
     
     def reset_trust_score(self, entity_id: str, new_score: float = 100.0) -> bool:
         """
@@ -291,27 +318,29 @@ class TrustManager:
         Returns:
             True if successful, False if entity not found
         """
-        if entity_id not in self.trust_records:
-            return False
-        
-        new_score = max(0.0, min(100.0, new_score))
-        
-        # Update existing record
-        record = self.trust_records[entity_id]
-        updated_record = TrustRecord(
-            entity_id=entity_id,
-            trust_score=new_score,
-            last_updated=time.time(),
-            behavior_history=[],  # Reset history
-            trust_trend='stable',
-            risk_level=self._calculate_risk_level(new_score)
-        )
-        
-        self.trust_records[entity_id] = updated_record
-        return True
-    
+        with self._lock:
+            if entity_id not in self.trust_records:
+                return False
+
+            new_score = max(0.0, min(100.0, new_score))
+            updated_record = TrustRecord(
+                entity_id=entity_id,
+                trust_score=new_score,
+                last_updated=time.time(),
+                behavior_history=[],
+                trust_trend='stable',
+                risk_level=self._calculate_risk_level(new_score)
+            )
+            self.trust_records[entity_id] = updated_record
+            self._store.save_trust_record(updated_record.to_dict())
+            return True
+
     def get_trust_statistics(self) -> Dict[str, Any]:
         """Get overall trust system statistics."""
+        with self._lock:
+            return self._get_trust_statistics_locked()
+
+    def _get_trust_statistics_locked(self) -> Dict[str, Any]:
         if not self.trust_records:
             return {
                 'total_entities': 0,

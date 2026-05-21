@@ -173,9 +173,10 @@ def _generate_reasoning(behavior_score: float, attack_stage: str, trust_score: f
     return ". ".join(reasoning_parts) + "."
 
 
-def make_decision(behavior_profile: Mapping[str, Any], 
+def make_decision(behavior_profile: Mapping[str, Any],
                  attack_prediction: Mapping[str, Any],
-                 trust_score: float) -> Dict[str, Any]:
+                 trust_score: float,
+                 ml_advisory: Mapping[str, Any] = None) -> Dict[str, Any]:
     """
     Make a security decision based on behavior profile, attack prediction, and trust score.
     
@@ -212,7 +213,20 @@ def make_decision(behavior_profile: Mapping[str, Any],
     action = _determine_action(behavior_score, attack_stage, trust_score)
     severity = _determine_severity(behavior_score, attack_stage)
     confidence = _calculate_confidence(behavior_score, prediction_confidence, trust_score)
+    if ml_advisory and ml_advisory.get("enabled"):
+        try:
+            from prediction.model_inference import blend_confidence
+            confidence = blend_confidence(confidence, dict(ml_advisory))
+        except ImportError:
+            pass
+
     reasoning = _generate_reasoning(behavior_score, attack_stage, trust_score, action, severity)
+    if ml_advisory and ml_advisory.get("enabled"):
+        reasoning += (
+            f" ML shadow: {ml_advisory.get('anomaly_label', 'n/a')}"
+            f" (advisory {ml_advisory.get('advisory_score', 0):.1f},"
+            f" {ml_advisory.get('model_version', 'n/a')})."
+        )
     
     # Create decision object
     decision = SecurityDecision(
@@ -222,7 +236,10 @@ def make_decision(behavior_profile: Mapping[str, Any],
         reasoning=reasoning
     )
     
-    return decision.to_dict()
+    result = decision.to_dict()
+    if ml_advisory:
+        result["ml_advisory"] = dict(ml_advisory)
+    return result
 
 
 __all__ = ["SecurityDecision", "make_decision"]

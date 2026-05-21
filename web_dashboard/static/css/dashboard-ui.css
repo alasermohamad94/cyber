@@ -1,0 +1,394 @@
+/*
+ * Dashboard UI — contrast & component fixes
+ * Loaded after forest_theme.css and Bootstrap
+ */
+
+:root {
+    --cds-primary: #002623;
+    --cds-secondary: #054239;
+    --cds-accent: #4a151e;
+    --cds-gold: #b9a779;
+    --cds-medium: #988561;
+    --cds-surface: #ffffff;
+    --cds-surface-muted: #f4f6f5;
+    --cds-text-on-dark: #ffffff;
+    --cds-text-on-light: #161616;
+    --cds-text-muted: #5c636a;
+    --cds-border: #c5d4d0;
+    --cds-success: #2d6a4f;
+    --cds-warning: #b8860b;
+    --cds-danger: #6b1f2a;
+    --cds-info: #054239;
+}
+
+/* Body: dark gradient background, light text only outside cards */
+body {
+    color: var(--cds-text-on-dark);
+    background: linear-gradient(135deg, var(--cds-primary) 0%, var(--cds-secondary) 100%);
+}
+
+.main-container {
+    color: var(--cds-text-on-dark);
+}
+
+/* All white/surface panels: dark readable text */
+.card,
+.card-body,
+.modal-content,
+.table,
+.entity-analysis-form,
+.threat-item,
+.list-group-item,
+.form-control,
+.form-select {
+    color: var(--cds-text-on-light);
+}
+
+.card {
+    background: var(--cds-surface) !important;
+    border: 1px solid var(--cds-border) !important;
+}
+
+.card-body {
+    background: var(--cds-surface);
+}
+
+.card-body .text-muted,
+.card .text-muted {
+    color: var(--cds-text-muted) !important;
+}
+
+.card-body h1, .card-body h2, .card-body h3,
+.card-body h4, .card-body h5, .card-body h6,
+.card-body p, .card-body label, .card-body td,
+.card-body th, .card-body li, .card-body span:not(.badge) {
+    color: inherit;
+}
+
+/* Card headers: always dark band + light text */
+.card-header {
+    background: linear-gradient(135deg, var(--cds-primary) 0%, var(--cds-secondary) 100%) !important;
+    color: var(--cds-text-on-dark) !important;
+    border-bottom: 3px solid var(--cds-accent) !important;
+}
+
+.card-header .btn,
+.card-header i {
+    color: inherit;
+}
+
+/* Page hero banners (colored top cards) */
+.card.bg-info,
+.card.bg-danger,
+.card.bg-secondary,
+.card.bg-primary {
+    color: var(--cds-text-on-dark) !important;
+}
+
+.card.bg-info .card-body,
+.card.bg-danger .card-body,
+.card.bg-secondary .card-body {
+    color: var(--cds-text-on-dark) !important;
+}
+
+/* Metric tiles */
+.metric-card .metric-value {
+    color: var(--cds-primary) !important;
+}
+
+.metric-card .metric-label,
+.metric-card small {
+    color: var(--cds-text-muted) !important;
+}
+
+/* ----- Buttons (explicit — no undefined vars) ----- */
+.btn-primary {
+    background: linear-gradient(135deg, var(--cds-primary), var(--cds-secondary)) !important;
+    border: 1px solid var(--cds-primary) !important;
+    color: var(--cds-text-on-dark) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background: linear-gradient(135deg, var(--cds-secondary), var(--cds-primary)) !important;
+    color: var(--cds-text-on-dark) !important;
+    filter: brightness(1.08);
+}
+
+.btn-secondary {
+    background: #5c636a !important;
+    border-color: #5c636a !important;
+    color: #fff !important;
+}
+
+.btn-success {
+    background: var(--cds-success) !important;
+    border-color: var(--cds-success) !important;
+    color: #fff !important;
+}
+
+.btn-warning {
+    background: var(--cds-gold) !important;
+    border-color: #8a7340 !important;
+    color: var(--cds-primary) !important;
+    font-weight: 600;
+}
+
+.btn-danger {
+    background: var(--cds-danger) !important;
+    border-color: var(--cds-accent) !important;
+    color: #fff !important;
+}
+
+.btn-info {
+    background: var(--cds-info) !important;
+    border-color: var(--cds-secondary) !important;
+    color: #fff !important;
+}
+
+.btn-light {
+    background: #fff !important;
+    border: 1px solid var(--cds-border) !important;
+    color: var(--cds-primary) !important;
+    font-weight: 600;
+}
+
+.btn-light:hover {
+    background: var(--cds-surface-muted) !important;
+    color: var(--cds-primary) !important;
+}
+
+/* On dark headers: light outline buttons */
+.card-header .btn-outline-light,
+.card.bg-danger .btn-outline-light,
+.card.bg-info .btn-outline-light {
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.85) !important;
+    background: transparent !important;
+}
+
+.card-header .btn-outline-light:hover,
+.card.bg-danger .btn-outline-light:hover,
+.card.bg-info .btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #fff !important;
+}
+
+/* Never use outline-light on white panels */
+.card-body .btn-outline-light,
+.table .btn-outline-light {
+    color: var(--cds-primary) !important;
+    border-color: var(--cds-primary) !important;
+    background: transparent !important;
+}
+
+/* ----- Tables ----- */
+.table {
+    color: var(--cds-text-on-light) !important;
+    background: var(--cds-surface) !important;
+}
+
+.table thead th {
+    background: linear-gradient(135deg, var(--cds-primary), var(--cds-secondary)) !important;
+    color: var(--cds-text-on-dark) !important;
+    border-color: var(--cds-secondary) !important;
+}
+
+.table tbody td {
+    color: var(--cds-text-on-light) !important;
+    border-color: var(--cds-border);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--cds-surface-muted) !important;
+}
+
+/* ----- Navbar ----- */
+.navbar-dark .navbar-brand,
+.navbar-dark .nav-link,
+.navbar-dark .navbar-text {
+    color: var(--cds-gold) !important;
+}
+
+.navbar-dark .nav-link:hover,
+.navbar-dark .nav-link.active {
+    color: #fff !important;
+    background: var(--cds-accent);
+}
+
+.navbar-text,
+#connection-status {
+    color: #fff !important;
+}
+
+/* ----- Modals ----- */
+.modal-header {
+    background: linear-gradient(135deg, var(--cds-primary), var(--cds-secondary));
+    color: var(--cds-text-on-dark);
+    border-bottom: 3px solid var(--cds-accent);
+}
+
+.modal-header .modal-title {
+    color: var(--cds-text-on-dark);
+}
+
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.modal-body,
+.modal-footer {
+    background: var(--cds-surface);
+    color: var(--cds-text-on-light);
+}
+
+/* ----- Forms ----- */
+.form-control,
+.form-select {
+    background: #fff;
+    color: var(--cds-text-on-light);
+    border: 2px solid var(--cds-border);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--cds-secondary);
+    box-shadow: 0 0 0 0.2rem rgba(5, 66, 57, 0.25);
+    color: var(--cds-text-on-light);
+}
+
+.form-label {
+    color: var(--cds-text-on-light);
+    font-weight: 500;
+}
+
+/* ----- Alerts / notifications ----- */
+.alert {
+    color: var(--cds-text-on-light);
+}
+
+.alert-success {
+    background: #e8f5e9 !important;
+    color: var(--cds-success) !important;
+    border-left: 4px solid var(--cds-success);
+}
+
+.alert-warning {
+    background: #fff8e1 !important;
+    color: #7a5c00 !important;
+    border-left: 4px solid var(--cds-warning);
+}
+
+.alert-danger {
+    background: #fdecea !important;
+    color: var(--cds-danger) !important;
+    border-left: 4px solid var(--cds-danger);
+}
+
+.alert-info {
+    background: #e8f0ee !important;
+    color: var(--cds-info) !important;
+}
+
+.position-fixed.alert .btn-close {
+    filter: none;
+}
+
+/* ----- Threat blocks ----- */
+.threat-item {
+    background: var(--cds-surface-muted) !important;
+    color: var(--cds-text-on-light) !important;
+}
+
+.threat-item h6,
+.threat-item p,
+.threat-item .small {
+    color: var(--cds-text-on-light) !important;
+}
+
+.threat-item .text-muted {
+    color: var(--cds-text-muted) !important;
+}
+
+.timeline-item {
+    color: var(--cds-text-on-light);
+    border-bottom-color: var(--cds-border);
+}
+
+/* ----- Security events list ----- */
+.security-event {
+    background: var(--cds-surface-muted) !important;
+    color: var(--cds-text-on-light) !important;
+}
+
+/* ----- Login page ----- */
+body.login-page {
+    min-height: 100vh;
+}
+
+.login-page .card {
+    border: none;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.login-page .card-header {
+    border-radius: 12px 12px 0 0;
+}
+
+.login-page .card-body {
+    padding: 2rem;
+}
+
+/* ----- Connection badge ----- */
+.connection-status.connected {
+    background: var(--cds-success) !important;
+    color: #fff !important;
+}
+
+.connection-status.disconnected {
+    background: var(--cds-danger) !important;
+    color: #fff !important;
+}
+
+/* ----- Badges readable everywhere ----- */
+.badge {
+    font-weight: 600;
+}
+
+/* Chart area */
+.chart-container {
+    background: transparent;
+}
+
+/* Settings tabs on light background */
+.nav-tabs {
+    border-bottom: 2px solid var(--cds-border);
+}
+
+.nav-tabs .nav-link {
+    color: var(--cds-text-on-light) !important;
+    background: var(--cds-surface-muted);
+    border: 1px solid var(--cds-border);
+    margin-right: 4px;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--cds-primary) !important;
+    background: #fff;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--cds-text-on-dark) !important;
+    background: linear-gradient(135deg, var(--cds-primary), var(--cds-secondary)) !important;
+    border-color: var(--cds-primary);
+}
+
+.tab-content {
+    color: var(--cds-text-on-light);
+}
+
+.tab-content .card,
+.tab-content .form-check-label {
+    color: var(--cds-text-on-light);
+}

@@ -1,6 +1,6 @@
 # Cyber Defense System
 
-A comprehensive cyber defense system that monitors, analyzes, and responds to security threats in real-time. The system uses a multi-layered approach with perception, prediction, decision-making, and automated response capabilities.
+A cyber defense system that monitors, analyzes, and responds to security threats in real time. Core detection uses **rule-based engines** (perception, prediction, decision); optional ML shadow inference is scaffolded in `prediction/model_inference.py` for future rollout.
 
 ## Architecture
 
@@ -31,10 +31,17 @@ The system is built with the following modules:
 - **Response Types**: Enhanced monitoring, security alerts, network blocking, system isolation
 - **Tracking**: Complete response history with status and timing
 
-### 📊 Dashboard (`dashboard/`)
-- **Real-time Monitoring**: Command-line dashboard for system visualization
-- **Features**: System overview, risk distribution, active responses, high-risk entities
-- **Auto-refresh**: Updates every 5 seconds
+### 📊 Dashboards
+- **CLI** (`dashboard/`): Legacy terminal dashboards for local ops
+- **Web** (`web_dashboard/`): Primary operational UI with authenticated APIs, SQLite persistence, and live metrics from `psutil`
+
+### Web dashboard security (production-oriented defaults)
+- Session login with roles: **admin**, **analyst**, **viewer** (`CDS_*_USER` / `CDS_*_PASSWORD`)
+- Permission checks on sensitive APIs (e.g. only admin can block IPs)
+- `CDS_SECRET_KEY` from environment (never hard-coded)
+- Bind `127.0.0.1` by default; restrict CORS via `CDS_CORS_ORIGINS`
+- IP block attempts OS firewall rules (Windows `netsh` / Linux `iptables`) plus persistent policy store
+- ML shadow inference in analysis pipeline (`CDS_ML_SHADOW_MODE`, optional `CDS_ML_CANARY`)
 
 ## Installation & Setup
 

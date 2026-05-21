@@ -1,76 +1,73 @@
 #!/usr/bin/env python3
-"""
-Cyber Defense System - Web Dashboard Launcher
-==========================================
+"""Launcher for the Cyber Defense System web dashboard."""
 
-Simple launcher script for the web dashboard.
-Handles dependency installation and startup.
-"""
-
-import sys
 import os
 import subprocess
-import time
+import sys
+
+WEB_DASHBOARD_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(WEB_DASHBOARD_DIR)
+REQUIREMENTS = os.path.join(WEB_DASHBOARD_DIR, "requirements.txt")
+
 
 def check_and_install_dependencies():
-    """Check and install required dependencies."""
     print("Checking dependencies...")
-    
     try:
-        import flask
-        import flask_socketio
-        import psutil
+        import flask  # noqa: F401
+        import flask_socketio  # noqa: F401
+        import psutil  # noqa: F401
         print("All dependencies are already installed")
         return True
-    except ImportError as e:
-        print(f"Missing dependency: {e}")
+    except ImportError as exc:
+        print(f"Missing dependency: {exc}")
         print("Installing dependencies...")
-        
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "-r", REQUIREMENTS],
+                cwd=WEB_DASHBOARD_DIR,
+            )
             print("Dependencies installed successfully")
             return True
         except subprocess.CalledProcessError:
             print("Failed to install dependencies")
-            print("Please run: pip install -r requirements.txt")
+            print(f"Please run: pip install -r {REQUIREMENTS}")
             return False
 
+
 def main():
-    """Main launcher function."""
     print("Cyber Defense System - Web Dashboard")
     print("=" * 50)
-    
-    # Add project root to Python path
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if project_root not in sys.path:
-        sys.path.insert(0, project_root)
-    
-    # Check dependencies
+
+    if PROJECT_ROOT not in sys.path:
+        sys.path.insert(0, PROJECT_ROOT)
+    os.chdir(WEB_DASHBOARD_DIR)
+
     if not check_and_install_dependencies():
         input("Press Enter to exit...")
         return
-    
+
+    from security.config import get_bind_host, get_bind_port
+
+    host = get_bind_host()
+    port = get_bind_port()
     print("\nStarting web dashboard...")
-    print("Dashboard will be available at: http://localhost:8080")
-    print("Access from other devices using your IP address")
+    print(f"Login:     http://{host}:{port}/login")
+    print(f"Dashboard: http://{host}:{port}/web_dashboard  (after login)")
+    print("Default login: admin / changeme (override via CDS_ADMIN_* env vars)")
     print("Press Ctrl+C to stop the server")
     print("=" * 50)
-    
+
     try:
-        # Import and run the app
-        from app import app, socketio
-        
-        # Get port from environment or default to 8080
-        port = int(os.environ.get('PORT', 8080))
-        
-        # Start the server
-        socketio.run(app, host='0.0.0.0', port=port, debug=False)
-        
+        from app import app, socketio, start_background_threads
+
+        start_background_threads()
+        socketio.run(app, host=host, port=port, debug=False)
     except KeyboardInterrupt:
         print("\n\nServer stopped by user")
-    except Exception as e:
-        print(f"\nError starting server: {e}")
+    except Exception as exc:
+        print(f"\nError starting server: {exc}")
         input("Press Enter to exit...")
+
 
 if __name__ == "__main__":
     main()
