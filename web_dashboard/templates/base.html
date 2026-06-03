@@ -1,312 +1,170 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Cyber Defense System{% endblock %}</title>
-    
-    <!-- Bootstrap 5 CSS -->
+    <title>{% block title %}نظام الدفاع السيبراني{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Socket.IO -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
-    
     <link href="{{ url_for('static', filename='css/forest_theme.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/dashboard-ui.css') }}" rel="stylesheet">
-    
-    <style>
-        .navbar {
-            background: rgba(0, 38, 35, 0.95) !important;
-            backdrop-filter: blur(10px);
-            border-bottom: 2px solid #4a151e;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
-        }
-
-        .navbar-brand {
-            font-weight: bold;
-            font-size: 1.5rem;
-        }
-
-        .main-container {
-            padding: 20px;
-            min-height: calc(100vh - 76px);
-        }
-
-        .card {
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 38, 35, 0.15);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 40px rgba(0, 38, 35, 0.2);
-        }
-
-        .card-header {
-            border-radius: 15px 15px 0 0 !important;
-            font-weight: 600;
-        }
-
-        .metric-card {
-            text-align: center;
-        }
-
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-            animation: pulse 2s infinite;
-        }
-
-        .status-online { background: #2d6a4f; }
-        .status-warning { background: #b9a779; }
-        .status-danger { background: #6b1f2a; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .progress {
-            height: 8px;
-            border-radius: 4px;
-            background: #e9ecef;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #e9ecef;
-            border-top: 3px solid #054239;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .chart-container {
-            position: relative;
-            height: 300px;
-            margin: 20px 0;
-        }
-
-        .security-event {
-            border-left: 4px solid;
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-        }
-
-        .security-event.low { border-left-color: #054239; }
-        .security-event.medium { border-left-color: #b9a779; }
-        .security-event.high { border-left-color: #6b1f2a; }
-        .security-event.critical { border-left-color: #4a151e; }
-
-        .connection-status {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 1000;
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @media (max-width: 768px) {
-            .main-container { padding: 10px; }
-            .metric-value { font-size: 2rem; }
-        }
-    </style>
+    <link href="{{ url_for('static', filename='css/cds-pro.css') }}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
 </head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-shield-alt"></i> Cyber Defense System
+<body class="cds-app{% if cds_role %} cds-role-{{ cds_role }}{% endif %}">
+    <div id="cds-demo-banner" class="cds-demo-banner" hidden></div>
+
+    <aside class="cds-sidebar" id="cds-sidebar">
+        <div class="cds-sidebar-brand">
+            <a href="{{ url_for('index') }}">
+                <span class="cds-logo-icon"><i class="fas fa-shield-alt"></i></span>
+                <span>الدفاع السيبراني</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
-                            <i class="fas fa-tachometer-alt"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'analytics' %}active{% endif %}" href="{{ url_for('analytics') }}">
-                            <i class="fas fa-chart-line"></i> Analytics
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'threat_management' %}active{% endif %}" href="{{ url_for('threat_management') }}">
-                            <i class="fas fa-shield-virus"></i> Threat Management
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
-                            <i class="fas fa-cog"></i> Settings
-                        </a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <span class="navbar-text">
-                            <span class="status-indicator status-online"></span>
-                            <span id="connection-status">Connected</span>
-                        </span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('logout') }}">
-                            <i class="fas fa-sign-out-alt"></i> Logout
-                        </a>
-                    </li>
-                </ul>
-            </div>
         </div>
-    </nav>
+        <nav class="cds-nav">
+            <a class="cds-nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
+                <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+            </a>
+            <a class="cds-nav-link {% if request.endpoint == 'analytics' %}active{% endif %}" href="{{ url_for('analytics') }}">
+                <i class="fas fa-chart-line"></i> التحليلات
+            </a>
+            <a class="cds-nav-link {% if request.endpoint == 'threat_management' %}active{% endif %}" href="{{ url_for('threat_management') }}">
+                <i class="fas fa-shield-virus"></i> إدارة التهديدات
+            </a>
+            <a class="cds-nav-link {% if request.endpoint == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">
+                <i class="fas fa-cog"></i> الإعدادات
+            </a>
+        </nav>
+        <div class="cds-sidebar-footer">
+            <a class="cds-logout" href="{{ url_for('logout') }}">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </a>
+        </div>
+    </aside>
 
-    <!-- Connection Status Indicator -->
-    <div id="connection-indicator" class="connection-status connected">
-        <i class="fas fa-wifi"></i> Live
+    <button type="button" class="cds-sidebar-toggle" id="cds-sidebar-toggle" aria-label="القائمة">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="cds-main">
+        <header class="cds-topbar">
+            <div>
+                <h1 class="cds-topbar-title">{% block page_title %}لوحة التحكم{% endblock %}</h1>
+                {% block page_subtitle %}<small>{% block page_subtitle_text %}مراقبة أمنية في الوقت الفعلي{% endblock %}</small>{% endblock %}
+            </div>
+            <div class="cds-topbar-meta">
+                <div id="cds-data-quality" class="cds-data-quality">
+                    <span class="cds-dq-item"><i class="fas fa-spinner fa-spin"></i> جاري تحميل جودة البيانات...</span>
+                </div>
+                <div class="cds-user-chip">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="cds-username">—</span>
+                    <span id="cds-role-badge" class="cds-role-badge">—</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="cds-content cds-fade-in">
+            {% block content %}{% endblock %}
+        </main>
     </div>
 
-    <!-- Main Content -->
-    <div class="container-fluid main-container">
-        {% block content %}{% endblock %}
+    <div id="connection-indicator" class="cds-connection-pill connected">
+        <i class="fas fa-wifi"></i> متصل
     </div>
 
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Common JavaScript -->
+    <script src="{{ url_for('static', filename='js/cds-app.js') }}"></script>
     <script>
-        // Initialize Socket.IO
         const socket = io();
-        
-        // Connection status
-        socket.on('connect', function() {
-            console.log('Connected to server');
-            updateConnectionStatus(true);
-        });
-        
-        socket.on('disconnect', function() {
-            console.log('Disconnected from server');
-            updateConnectionStatus(false);
-        });
-        
+
+        socket.on('connect', function() { updateConnectionStatus(true); });
+        socket.on('disconnect', function() { updateConnectionStatus(false); });
+
         function updateConnectionStatus(connected) {
             const indicator = document.getElementById('connection-indicator');
-            const status = document.getElementById('connection-status');
-            
+            if (!indicator) return;
             if (connected) {
-                indicator.className = 'connection-status connected';
-                indicator.innerHTML = '<i class="fas fa-wifi"></i> Live';
-                status.textContent = 'Connected';
+                indicator.className = 'cds-connection-pill connected';
+                indicator.innerHTML = '<i class="fas fa-wifi"></i> متصل';
             } else {
-                indicator.className = 'connection-status disconnected';
-                indicator.innerHTML = '<i class="fas fa-wifi-slash"></i> Disconnected';
-                status.textContent = 'Disconnected';
+                indicator.className = 'cds-connection-pill disconnected';
+                indicator.innerHTML = '<i class="fas fa-wifi-slash"></i> غير متصل';
             }
         }
-        
-        // Utility functions
+
+        document.getElementById('cds-sidebar-toggle')?.addEventListener('click', function() {
+            document.getElementById('cds-sidebar')?.classList.toggle('cds-open');
+        });
+
         function formatBytes(bytes) {
             const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-            let size = bytes;
-            let unitIndex = 0;
-            
-            while (size >= 1024 && unitIndex < units.length - 1) {
-                size /= 1024;
-                unitIndex++;
-            }
-            
-            return size.toFixed(1) + ' ' + units[unitIndex];
+            let size = bytes, i = 0;
+            while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
+            return size.toFixed(1) + ' ' + units[i];
         }
-        
+
         function formatDuration(seconds) {
-            const days = Math.floor(seconds / 86400);
-            const hours = Math.floor((seconds % 86400) / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = Math.floor(seconds % 60);
-            
-            if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-            if (hours > 0) return `${hours}h ${minutes}m ${secs}s`;
-            if (minutes > 0) return `${minutes}m ${secs}s`;
-            return `${secs}s`;
+            const d = Math.floor(seconds / 86400);
+            const h = Math.floor((seconds % 86400) / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (d > 0) return `${d}ي ${h}س ${m}د`;
+            if (h > 0) return `${h}س ${m}د ${s}ث`;
+            if (m > 0) return `${m}د ${s}ث`;
+            return `${s}ث`;
         }
-        
+
         function getSeverityColor(severity) {
-            const colors = {
-                'low': '#17a2b8',
-                'medium': '#f4b942',
-                'high': '#dc3545',
-                'critical': '#721c24'
-            };
-            return colors[severity] || '#6c757d';
+            return (window.CDS && CDS.getSeverityColor(severity)) || '#5c636a';
         }
-        
+
+        function getSeverityBadgeClass(severity) {
+            return (window.CDS && CDS.getSeverityBadgeClass(severity)) || 'secondary';
+        }
+
         function showNotification(message, type = 'info') {
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-            alertDiv.style.cssText = 'top: 100px; right: 20px; z-index: 9999; min-width: 300px;';
-            alertDiv.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
+            alertDiv.style.cssText = 'top: 90px; left: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
             document.body.appendChild(alertDiv);
-            
-            setTimeout(() => {
-                alertDiv.remove();
-            }, 5000);
+            setTimeout(() => alertDiv.remove(), 5000);
         }
-        
-        // API helper
+
         async function fetchAPI(endpoint, options = {}) {
-            try {
-                const response = await fetch(`/api${endpoint}`, {
-                    ...options,
-                    credentials: 'same-origin'
-                });
-                if (response.status === 401) {
-                    window.location.href = '/login';
-                    throw new Error('Authentication required');
-                }
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return await response.json();
-            } catch (error) {
-                console.error('API Error:', error);
-                if (!error.message.includes('Authentication')) {
-                    showNotification(`API Error: ${error.message}`, 'danger');
-                }
-                throw error;
+            const response = await fetch(`/api${endpoint}`, { ...options, credentials: 'same-origin' });
+            if (response.status === 401) {
+                window.location.href = '/login';
+                throw new Error('Authentication required');
             }
+            if (response.status === 403) {
+                const err = await response.json().catch(() => ({}));
+                showNotification(err.message || 'ليس لديك صلاحية لهذا الإجراء', 'danger');
+                throw new Error('Forbidden');
+            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            if (data.data_quality && window.CDS) {
+                CDS.dataQuality = data.data_quality;
+                CDS.renderDataQualityBar(data.data_quality);
+            }
+            return data;
         }
+
+        fetch('/api/demo/disclaimer').then(r => r.ok ? r.json() : null).then(demo => {
+            if (demo && demo.demo_mode) {
+                document.body.classList.add('cds-has-demo');
+                const b = document.getElementById('cds-demo-banner');
+                if (b) {
+                    b.hidden = false;
+                    b.innerHTML = `<i class="fas fa-flask"></i> وضع العرض التجريبي — البيانات الحية من <code>${demo.production_path}</code>`;
+                }
+            }
+        }).catch(() => {});
     </script>
-    
     {% block scripts %}{% endblock %}
 </body>
 </html>

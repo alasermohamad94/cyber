@@ -37,3 +37,21 @@ def resolve_role_for_user(username: str, credential_map: Dict[str, Tuple[str, Ro
     if entry:
         return entry[1]
     return None
+
+
+def permissions_for_role(role: str) -> list:
+    """Return permission keys granted to the given role."""
+    try:
+        r = Role(role)
+    except ValueError:
+        return []
+    return [perm for perm, roles in PERMISSIONS.items() if r in roles]
+
+
+def role_rank(role: str) -> int:
+    """Higher rank = more privileges (admin > analyst > viewer)."""
+    order = {Role.VIEWER: 0, Role.ANALYST: 1, Role.ADMIN: 2}
+    try:
+        return order[Role(role)]
+    except ValueError:
+        return -1

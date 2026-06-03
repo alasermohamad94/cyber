@@ -1,0 +1,36 @@
+# Render.com — نشر لوحة الويب (مجاني)
+# اربط المستودع: https://github.com/alasermohamad94/cyber
+# ثم: New > Blueprint > اختر هذا الملف أو Web Service يدوياً
+
+services:
+  - type: web
+    name: cyber-defense-dashboard
+    runtime: python
+    plan: free
+    rootDir: web_dashboard
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --worker-class gthread --threads 4 --timeout 120 wsgi:application
+    healthCheckPath: /login
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: CDS_BIND_HOST
+        value: "0.0.0.0"
+      - key: CDS_SECRET_KEY
+        generateValue: true
+      - key: CDS_ADMIN_USER
+        value: admin
+      - key: CDS_ADMIN_PASSWORD
+        generateValue: true
+      - key: CDS_ANALYST_USER
+        value: analyst
+      - key: CDS_ANALYST_PASSWORD
+        generateValue: true
+      - key: CDS_VIEWER_USER
+        value: viewer
+      - key: CDS_VIEWER_PASSWORD
+        generateValue: true
+      - key: CDS_CORS_ORIGINS
+        sync: false
+      - key: CDS_FIREWALL_ENABLED
+        value: "false"

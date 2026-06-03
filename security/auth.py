@@ -12,8 +12,10 @@ from security.roles import Role, role_has_permission, resolve_role_for_user
 
 
 def login_user(username: str, role: str) -> None:
+    """Start a fresh session with canonical role from credential verification."""
+    session.clear()
     session["authenticated"] = True
-    session["username"] = username
+    session["username"] = username.strip()
     session["role"] = role
 
 
@@ -26,13 +28,31 @@ def is_authenticated() -> bool:
 
 
 def get_current_role() -> str:
-    return session.get("role", Role.VIEWER.value)
+    """
+    Resolve role from the configured user directory (source of truth).
+    Prevents stale or tampered session['role'] from elevating privileges.
+    """
+    if not is_authenticated():
+        return Role.VIEWER.value
+    username = (session.get("username") or "").strip()
+    if not username:
+        return Role.VIEWER.value
+    directory = get_user_directory()
+    entry = directory.get(username)
+    if not entry:
+        return Role.VIEWER.value
+    role = entry[1]
+    role_val = role.value if isinstance(role, Role) else str(role)
+    session["role"] = role_val
+    return role_val
 
 
 def verify_credentials(username: str, password: str) -> Optional[str]:
     """
     Verify credentials. Returns role string on success, None on failure.
     """
+    username = (username or "").strip()
+    password = password or ""
     directory = get_user_directory()
     entry = directory.get(username)
     if not entry:

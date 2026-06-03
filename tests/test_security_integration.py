@@ -9,7 +9,8 @@ import pytest
 from storage.persistence import SecurityStore
 from security.auth import verify_credentials
 from security.firewall import validate_ip
-from security.roles import Role, role_has_permission
+from security.config import get_user_directory
+from security.roles import Role, permissions_for_role, role_has_permission
 
 
 @pytest.fixture
@@ -100,6 +101,112 @@ def test_viewer_cannot_block_ip():
         content_type="application/json",
     )
     assert resp.status_code == 403
+
+
+def test_viewer_permissions_list():
+    perms = permissions_for_role(Role.VIEWER.value)
+    assert "metrics:read" in perms
+    assert "security:read" in perms
+    assert "ip:block" not in perms
+    assert "entity:analyze" not in perms
+    assert "report:generate" not in perms
+
+
+def test_analyst_permissions_list():
+    perms = permissions_for_role(Role.ANALYST.value)
+    assert "entity:analyze" in perms
+    assert "report:generate" in perms
+    assert "ip:block" not in perms
+
+
+def test_session_role_not_escalated_when_tampered():
+    pytest.importorskip("flask")
+    from web_dashboard.app import app
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["authenticated"] = True
+        sess["username"] = "viewer"
+        sess["role"] = Role.ADMIN.value
+    data = client.get("/api/session-info").get_json()
+    assert data["role"] == Role.VIEWER.value
+    assert "ip:block" not in data["permissions"]
+    assert client.post(
+        "/api/block-ip",
+        json={"ip_address": "10.0.0.1"},
+        content_type="application/json",
+    ).status_code == 403
+
+
+def test_analyst_cannot_block_ip():
+    pytest.importorskip("flask")
+    from web_dashboard.app import app
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["authenticated"] = True
+        sess["username"] = "analyst"
+        sess["role"] = Role.ADMIN.value
+    assert client.post(
+        "/api/block-ip",
+        json={"ip_address": "10.0.0.88"},
+        content_type="application/json",
+    ).status_code == 403
+
+
+def test_viewer_cannot_analyze_entity():
+    pytest.importorskip("flask")
+    from web_dashboard.app import app
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["authenticated"] = True
+        sess["username"] = "viewer"
+        sess["role"] = Role.VIEWER.value
+    resp = client.post(
+        "/api/analyze-entity",
+        json={"entity_id": "x", "entity_data": {"entity_type": "workstation"}},
+        content_type="application/json",
+    )
+    assert resp.status_code == 403
+
+
+def test_viewer_cannot_generate_report():
+    pytest.importorskip("flask")
+    from web_dashboard.app import app
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["authenticated"] = True
+        sess["username"] = "viewer"
+        sess["role"] = Role.VIEWER.value
+    assert client.get("/api/security-report").status_code == 403
+
+
+def test_login_assigns_viewer_role():
+    pytest.importorskip("flask")
+    from web_dashboard.app import app
+
+    client = app.test_client()
+    resp = client.post(
+        "/login",
+        data={"username": "viewer", "password": "viewer123"},
+        follow_redirects=False,
+    )
+    assert resp.status_code in (302, 303)
+    data = client.get("/api/session-info").get_json()
+    assert data["role"] == Role.VIEWER.value
+    assert set(data["permissions"]) == set(permissions_for_role(Role.VIEWER.value))
+
+
+def test_duplicate_cds_usernames_rejected():
+    os.environ["CDS_ADMIN_USER"] = "same"
+    os.environ["CDS_ANALYST_USER"] = "same"
+    os.environ["CDS_VIEWER_USER"] = "viewer"
+    with pytest.raises(ValueError, match="Duplicate"):
+        get_user_directory()
+    os.environ.pop("CDS_ADMIN_USER", None)
+    os.environ.pop("CDS_ANALYST_USER", None)
 
 
 def test_ml_shadow_predict():

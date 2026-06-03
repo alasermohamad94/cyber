@@ -1,58 +1,58 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Cyber Defense System{% endblock %}
+{% block title %}لوحة التحكم — نظام الدفاع السيبراني{% endblock %}
+{% block page_title %}لوحة التحكم{% endblock %}
+{% block page_subtitle_text %}مقاييس النظام والأمان — مصدر API حي (P1){% endblock %}
 
 {% block content %}
-<div class="row fade-in">
+<div class="cds-page-hero">
+    <div>
+        <h2><i class="fas fa-tachometer-alt"></i> نظرة عامة تشغيلية</h2>
+        <p>جميع المؤشرات من واجهات API الموحّدة — لا بيانات وهمية</p>
+    </div>
+    <div class="cds-hero-actions">
+        {% if cds_has_perm('report:generate') %}
+        <button class="btn btn-light btn-sm" data-permission="report:generate" onclick="generateSecurityReport()">
+            <i class="fas fa-file-alt"></i> تقرير أمني
+        </button>
+        {% endif %}
+        <button class="btn btn-warning btn-sm" onclick="refreshData()">
+            <i class="fas fa-sync-alt"></i> تحديث
+        </button>
+    </div>
+</div>
+
+<div class="cds-kpi-grid">
     <!-- System Metrics Cards -->
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card metric-card">
-            <div class="card-body">
-                <i class="fas fa-microchip fa-2x text-primary mb-3"></i>
-                <div class="metric-value" id="cpu-metric">0%</div>
-                <div class="metric-label">CPU Usage</div>
-                <div class="progress mt-2">
-                    <div class="progress-bar bg-primary" id="cpu-progress" style="width: 0%"></div>
-                </div>
-            </div>
+    <div class="cds-kpi">
+        <div class="cds-kpi-icon"><i class="fas fa-microchip"></i></div>
+        <div class="cds-kpi-value" id="cpu-metric">0%</div>
+        <div class="cds-kpi-label">استخدام المعالج</div>
+        <div class="progress mt-2">
+            <div class="progress-bar bg-primary" id="cpu-progress" style="width: 0%"></div>
         </div>
     </div>
-    
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card metric-card">
-            <div class="card-body">
-                <i class="fas fa-memory fa-2x text-success mb-3"></i>
-                <div class="metric-value" id="memory-metric">0%</div>
-                <div class="metric-label">Memory Usage</div>
-                <div class="progress mt-2">
-                    <div class="progress-bar bg-success" id="memory-progress" style="width: 0%"></div>
-                </div>
-            </div>
+    <div class="cds-kpi">
+        <div class="cds-kpi-icon gold"><i class="fas fa-memory"></i></div>
+        <div class="cds-kpi-value" id="memory-metric">0%</div>
+        <div class="cds-kpi-label">الذاكرة</div>
+        <div class="progress mt-2">
+            <div class="progress-bar bg-success" id="memory-progress" style="width: 0%"></div>
         </div>
     </div>
-    
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card metric-card">
-            <div class="card-body">
-                <i class="fas fa-hdd fa-2x text-warning mb-3"></i>
-                <div class="metric-value" id="disk-metric">0%</div>
-                <div class="metric-label">Disk Usage</div>
-                <div class="progress mt-2">
-                    <div class="progress-bar bg-warning" id="disk-progress" style="width: 0%"></div>
-                </div>
-            </div>
+    <div class="cds-kpi">
+        <div class="cds-kpi-icon warn"><i class="fas fa-hdd"></i></div>
+        <div class="cds-kpi-value" id="disk-metric">0%</div>
+        <div class="cds-kpi-label">القرص</div>
+        <div class="progress mt-2">
+            <div class="progress-bar bg-warning" id="disk-progress" style="width: 0%"></div>
         </div>
     </div>
-    
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card metric-card">
-            <div class="card-body">
-                <i class="fas fa-network-wired fa-2x text-info mb-3"></i>
-                <div class="metric-value" id="connections-metric">0</div>
-                <div class="metric-label">Connections</div>
-                <small class="text-muted" id="uptime-metric">Uptime: 0s</small>
-            </div>
-        </div>
+    <div class="cds-kpi">
+        <div class="cds-kpi-icon"><i class="fas fa-network-wired"></i></div>
+        <div class="cds-kpi-value" id="connections-metric">0</div>
+        <div class="cds-kpi-label">الاتصالات النشطة</div>
+        <small class="text-muted" id="uptime-metric">وقت التشغيل: 0ث</small>
     </div>
 </div>
 
@@ -61,7 +61,7 @@
     <div class="col-lg-8 mb-4">
         <div class="card">
             <div class="card-header">
-                <i class="fas fa-chart-line"></i> Real-time Performance
+                <i class="fas fa-chart-line"></i> الأداء اللحظي
             </div>
             <div class="card-body">
                 <div class="chart-container">
@@ -75,28 +75,28 @@
     <div class="col-lg-4 mb-4">
         <div class="card">
             <div class="card-header">
-                <i class="fas fa-shield-alt"></i> Security Overview
+                <i class="fas fa-shield-alt"></i> ملخص الأمان
             </div>
             <div class="card-body">
                 <div class="row text-center mb-3">
                     <div class="col-6">
                         <h5 class="text-primary" id="total-entities">0</h5>
-                        <small class="text-muted">Entities</small>
+                        <small class="text-muted">الكيانات</small>
                     </div>
                     <div class="col-6">
                         <h5 class="text-warning" id="active-responses">0</h5>
-                        <small class="text-muted">Active Responses</small>
+                        <small class="text-muted">استجابات نشطة</small>
                     </div>
                 </div>
                 
                 <div class="row text-center mb-3">
                     <div class="col-6">
                         <h5 class="text-info" id="total-events">0</h5>
-                        <small class="text-muted">Total Events</small>
+                        <small class="text-muted">إجمالي الأحداث</small>
                     </div>
                     <div class="col-6">
                         <h5 class="text-danger" id="active-alerts">0</h5>
-                        <small class="text-muted">Active Alerts</small>
+                        <small class="text-muted">تنبيهات نشطة</small>
                     </div>
                 </div>
                 
@@ -113,7 +113,7 @@
     <div class="col-lg-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <i class="fas fa-exclamation-triangle"></i> Recent Security Events
+                <i class="fas fa-exclamation-triangle"></i> أحداث أمنية حديثة
             </div>
             <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                 <div id="security-events">
@@ -130,56 +130,63 @@
     <div class="col-lg-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <i class="fas fa-bolt"></i> Quick Actions
+                <i class="fas fa-bolt"></i> إجراءات سريعة
             </div>
             <div class="card-body">
                 <div class="row g-3">
+                    {% if cds_has_perm('entity:analyze') %}
                     <div class="col-md-6">
-                        <button class="btn btn-primary w-100" onclick="showEntityAnalysisModal()">
-                            <i class="fas fa-search"></i> Analyze Entity
+                        <button class="btn btn-primary w-100" data-permission="entity:analyze" onclick="showEntityAnalysisModal()">
+                            <i class="fas fa-search"></i> تحليل كيان
                         </button>
                     </div>
+                    {% endif %}
+                    {% if cds_has_perm('ip:block') %}
                     <div class="col-md-6">
-                        <button class="btn btn-warning w-100" onclick="showBlockIPModal()">
-                            <i class="fas fa-ban"></i> Block IP
+                        <button class="btn btn-warning w-100" data-permission="ip:block" onclick="showBlockIPModal()">
+                            <i class="fas fa-ban"></i> حظر IP
                         </button>
                     </div>
+                    {% endif %}
+                    {% if cds_has_perm('report:generate') %}
                     <div class="col-md-6">
-                        <button class="btn btn-info w-100" onclick="generateSecurityReport()">
-                            <i class="fas fa-file-alt"></i> Generate Report
+                        <button class="btn btn-info w-100" data-permission="report:generate" onclick="generateSecurityReport()">
+                            <i class="fas fa-file-alt"></i> تقرير أمني
                         </button>
                     </div>
+                    {% endif %}
                     <div class="col-md-6">
                         <button class="btn btn-success w-100" onclick="refreshData()">
-                            <i class="fas fa-sync-alt"></i> Refresh Data
+                            <i class="fas fa-sync-alt"></i> تحديث البيانات
                         </button>
                     </div>
                 </div>
                 
                 <hr>
                 
-                <h6>System Status</h6>
+                <h6>حالة النظام</h6>
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Firewall</span>
-                    <span class="badge bg-success">Active</span>
+                    <span>جدار الحماية</span>
+                    <span class="badge bg-success">نشط</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Backup</span>
-                    <span class="badge bg-info">Scheduled</span>
+                    <span>النسخ الاحتياطي</span>
+                    <span class="badge bg-info">مجدول</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Maintenance</span>
-                    <span class="badge bg-secondary">Off</span>
+                    <span>الصيانة</span>
+                    <span class="badge bg-secondary">متوقف</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center">
-                    <span>Security Level</span>
-                    <span class="badge bg-warning">High</span>
+                    <span>مستوى الأمان</span>
+                    <span class="badge bg-warning">مرتفع</span>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+{% if cds_has_perm('entity:analyze') %}
 <!-- Entity Analysis Modal -->
 <div class="modal fade" id="entityAnalysisModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -266,7 +273,9 @@
         </div>
     </div>
 </div>
+{% endif %}
 
+{% if cds_has_perm('ip:block') %}
 <!-- Block IP Modal -->
 <div class="modal fade" id="blockIPModal" tabindex="-1">
     <div class="modal-dialog">
@@ -296,6 +305,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -305,9 +315,9 @@
     let riskChart;
     const maxDataPoints = 20;
     
-    // Initialize charts
+    const C = window.CDS ? CDS.colors : { primary: '#002623', secondary: '#054239', gold: '#b9a779', severity: { low: '#054239', medium: '#b9a779', high: '#6b1f2a', critical: '#4a151e' } };
+
     function initCharts() {
-        // Performance Chart
         const perfCtx = document.getElementById('performanceChart').getContext('2d');
         performanceChart = new Chart(perfCtx, {
             type: 'line',
@@ -315,17 +325,17 @@
                 labels: [],
                 datasets: [
                     {
-                        label: 'CPU %',
+                        label: 'المعالج %',
                         data: [],
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderColor: C.primary,
+                        backgroundColor: 'rgba(0, 38, 35, 0.12)',
                         tension: 0.4
                     },
                     {
-                        label: 'Memory %',
+                        label: 'الذاكرة %',
                         data: [],
-                        borderColor: '#28a745',
-                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderColor: C.gold,
+                        backgroundColor: 'rgba(185, 167, 121, 0.2)',
                         tension: 0.4
                     }
                 ]
@@ -352,14 +362,14 @@
         riskChart = new Chart(riskCtx, {
             type: 'doughnut',
             data: {
-                labels: ['Low', 'Medium', 'High', 'Critical'],
+                labels: ['منخفض', 'متوسط', 'مرتفع', 'حرج'],
                 datasets: [{
                     data: [0, 0, 0, 0],
                     backgroundColor: [
-                        '#17a2b8',
-                        '#f4b942',
-                        '#dc3545',
-                        '#721c24'
+                        C.severity.low,
+                        C.severity.medium,
+                        C.severity.high,
+                        C.severity.critical
                     ]
                 }]
             },
@@ -388,7 +398,7 @@
         document.getElementById('disk-progress').style.width = data.disk_usage + '%';
         
         document.getElementById('connections-metric').textContent = data.active_connections;
-        document.getElementById('uptime-metric').textContent = 'Uptime: ' + data.uptime_formatted;
+        document.getElementById('uptime-metric').textContent = 'وقت التشغيل: ' + data.uptime_formatted;
         
         // Update performance chart
         const now = new Date().toLocaleTimeString();
@@ -461,29 +471,21 @@
         `).join('');
     }
     
-    function getSeverityBadgeClass(severity) {
-        const classes = {
-            'low': 'info',
-            'medium': 'warning',
-            'high': 'danger',
-            'critical': 'dark'
-        };
-        return classes[severity] || 'secondary';
-    }
-    
     // Modal functions
     function showEntityAnalysisModal() {
+        if (window.CDS && !CDS.requirePermission('entity:analyze')) return;
         const modal = new bootstrap.Modal(document.getElementById('entityAnalysisModal'));
         modal.show();
     }
     
     function showBlockIPModal() {
+        if (window.CDS && !CDS.requirePermission('ip:block')) return;
         const modal = new bootstrap.Modal(document.getElementById('blockIPModal'));
         modal.show();
     }
     
-    // Entity analysis
     async function analyzeEntity() {
+        if (window.CDS && !CDS.requirePermission('entity:analyze')) return;
         const entityId = document.getElementById('entityId').value;
         const entityType = document.getElementById('entityType').value;
         
@@ -553,6 +555,7 @@
     
     // Block IP
     async function blockIP() {
+        if (window.CDS && !CDS.requirePermission('ip:block')) return;
         const ipAddress = document.getElementById('ipAddress').value;
         
         if (!ipAddress) {
@@ -584,6 +587,7 @@
     
     // Generate security report
     async function generateSecurityReport() {
+        if (window.CDS && !CDS.requirePermission('report:generate')) return;
         try {
             const report = await fetchAPI('/security-report');
             

@@ -1,86 +1,58 @@
 {% extends "base.html" %}
 
-{% block title %}Threat Management - Cyber Defense System{% endblock %}
+{% block title %}إدارة التهديدات — نظام الدفاع السيبراني{% endblock %}
+{% block page_title %}إدارة التهديدات{% endblock %}
+{% block page_subtitle_text %}تهديدات وIPs محظورة — /api/threat-overview (P1){% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card bg-danger text-white">
-                <div class="card-body py-3">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h4 class="mb-0"><i class="fas fa-shield-virus"></i> Threat Management</h4>
-                            <p class="mb-0">Monitor and respond to security threats</p>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <button class="btn btn-light" onclick="scanForThreats()">
-                                <i class="fas fa-radar"></i> Scan Now
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="cds-page-hero">
+    <div>
+        <h2><i class="fas fa-shield-virus"></i> مركز إدارة التهديدات</h2>
+        <p>بيانات حية من التخزين والمحرك — حظر IP للمدير فقط (P0)</p>
     </div>
-
-    <!-- Threat Overview Cards -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card metric-card h-100">
-                <div class="card-body text-center">
-                    <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
-                    <h5 class="card-title">Active Threats</h5>
-                    <div class="metric-value" id="activeThreats">0</div>
-                    <small class="text-muted">Requiring attention</small>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card metric-card h-100">
-                <div class="card-body text-center">
-                    <i class="fas fa-ban fa-3x text-warning mb-3"></i>
-                    <h5 class="card-title">Blocked IPs</h5>
-                    <div class="metric-value" id="blockedIPs">0</div>
-                    <small class="text-muted">Currently blocked</small>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card metric-card h-100">
-                <div class="card-body text-center">
-                    <i class="fas fa-user-shield fa-3x text-info mb-3"></i>
-                    <h5 class="card-title">Isolated Systems</h5>
-                    <div class="metric-value" id="isolatedSystems">0</div>
-                    <small class="text-muted">Under quarantine</small>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card metric-card h-100">
-                <div class="card-body text-center">
-                    <i class="fas fa-check-double fa-3x text-success mb-3"></i>
-                    <h5 class="card-title">Resolved Today</h5>
-                    <div class="metric-value" id="resolvedToday">0</div>
-                    <small class="text-muted">Successfully mitigated</small>
-                </div>
-            </div>
-        </div>
+    <div class="cds-hero-actions">
+        <button class="btn btn-light btn-sm" onclick="scanForThreats()">
+            <i class="fas fa-radar"></i> تحديث المسح
+        </button>
+        {% if cds_has_perm('ip:block') %}
+        <button class="btn btn-warning btn-sm" data-permission="ip:block" onclick="showBlockIPModal()">
+            <i class="fas fa-ban"></i> حظر IP
+        </button>
+        {% endif %}
     </div>
+</div>
 
-    <!-- Main Content -->
-    <div class="row">
+<div class="cds-kpi-grid mb-4">
+    <div class="cds-kpi">
+        <div class="cds-kpi-icon" style="color:#6b1f2a"><i class="fas fa-exclamation-circle"></i></div>
+        <div class="cds-kpi-value" id="activeThreats">0</div>
+        <div class="cds-kpi-label">تهديدات نشطة</div>
+    </div>
+    <div class="cds-kpi">
+        <div class="cds-kpi-icon gold"><i class="fas fa-ban"></i></div>
+        <div class="cds-kpi-value" id="blockedIPs">0</div>
+        <div class="cds-kpi-label">عناوين محظورة</div>
+    </div>
+    <div class="cds-kpi">
+        <div class="cds-kpi-icon"><i class="fas fa-user-shield"></i></div>
+        <div class="cds-kpi-value" id="isolatedSystems">0</div>
+        <div class="cds-kpi-label">أنظمة معزولة</div>
+    </div>
+    <div class="cds-kpi">
+        <div class="cds-kpi-icon"><i class="fas fa-check-double"></i></div>
+        <div class="cds-kpi-value" id="resolvedToday">0</div>
+        <div class="cds-kpi-label">تم حلها اليوم</div>
+    </div>
+</div>
+
+<div class="row">
         <!-- Active Threats -->
         <div class="col-lg-8 mb-4">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-fire"></i> Active Threats</h5>
+                    <h5 class="mb-0"><i class="fas fa-fire"></i> تهديدات نشطة</h5>
                     <button class="btn btn-sm btn-light" onclick="refreshThreats()">
-                        <i class="fas fa-sync-alt"></i> Refresh
+                        <i class="fas fa-sync-alt"></i> تحديث
                     </button>
                 </div>
                 <div class="card-body" style="max-height: 600px; overflow-y: auto;">
@@ -125,9 +97,11 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-ban"></i> Blocked IP Addresses</h5>
-                    <button class="btn btn-sm btn-light" onclick="showBlockIPModal()">
-                        <i class="fas fa-plus"></i> Block IP
+                    {% if cds_has_perm('ip:block') %}
+                    <button class="btn btn-sm btn-light" data-permission="ip:block" onclick="showBlockIPModal()">
+                        <i class="fas fa-plus"></i> حظر IP
                     </button>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -154,6 +128,7 @@
     </div>
 </div>
 
+{% if cds_has_perm('ip:block') %}
 <!-- Block IP Modal -->
 <div class="modal fade" id="blockIPModal" tabindex="-1">
     <div class="modal-dialog">
@@ -191,11 +166,15 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
     let threatDistributionChart;
+    const C = window.CDS ? CDS.colors : {
+        severity: { low: '#054239', medium: '#b9a779', high: '#6b1f2a', critical: '#4a151e' }
+    };
 
     document.addEventListener('DOMContentLoaded', function() {
         initializeThreatChart();
@@ -210,7 +189,7 @@
                 labels: ['Critical', 'High', 'Medium', 'Low'],
                 datasets: [{
                     data: [0, 0, 0, 0],
-                    backgroundColor: ['#721c24', '#dc3545', '#ffc107', '#17a2b8']
+                    backgroundColor: [C.severity.critical, C.severity.high, C.severity.medium, C.severity.low]
                 }]
             },
             options: {
@@ -230,6 +209,7 @@
             renderThreatList(data.high_risk_events);
             renderTimeline(data.timeline);
             renderBlockedTable(data.blocked_ips);
+            if (window.CDS && CDS.applyPermissionUI) CDS.applyPermissionUI();
         } catch (error) {
             console.error('Failed to load threat data:', error);
         }
@@ -274,8 +254,8 @@
                     <div class="text-end">
                         <span class="badge bg-danger">${sev.toUpperCase()}</span>
                         <div class="mt-2">
-                            <button class="btn btn-sm btn-warning" onclick="respondToThreat('block', '${ip}')">
-                                <i class="fas fa-ban"></i> Block
+                            <button class="btn btn-sm btn-warning" data-permission="ip:block" onclick="respondToThreat('block', '${ip}')">
+                                <i class="fas fa-ban"></i> حظر
                             </button>
                         </div>
                     </div>
@@ -311,8 +291,8 @@
                 <td>${new Date(row.blocked_at * 1000).toLocaleString()}</td>
                 <td><span class="badge bg-${row.firewall_applied ? 'danger' : 'warning'}">${row.firewall_applied ? 'Firewall' : 'Policy'}</span></td>
                 <td>
-                    <button class="btn btn-sm btn-warning" onclick="unblockIP('${row.ip_address}')">
-                        <i class="fas fa-unlock"></i> Unblock
+                    <button class="btn btn-sm btn-warning" data-permission="ip:unblock" onclick="unblockIP('${row.ip_address}')">
+                        <i class="fas fa-unlock"></i> رفع الحظر
                     </button>
                 </td>
             </tr>
@@ -331,6 +311,7 @@
 
     async function respondToThreat(action, target) {
         if (action === 'block') {
+            if (window.CDS && !CDS.requirePermission('ip:block')) return;
             try {
                 await fetchAPI('/block-ip', {
                     method: 'POST',
@@ -350,7 +331,8 @@
     }
 
     async function unblockIP(ipAddress) {
-        if (!confirm(`Unblock IP ${ipAddress}?`)) return;
+        if (window.CDS && !CDS.requirePermission('ip:unblock')) return;
+        if (!confirm(`رفع الحظر عن ${ipAddress}؟`)) return;
         try {
             await fetchAPI('/unblock-ip', {
                 method: 'POST',
@@ -365,11 +347,13 @@
     }
 
     function showBlockIPModal() {
+        if (window.CDS && !CDS.requirePermission('ip:block')) return;
         const modal = new bootstrap.Modal(document.getElementById('blockIPModal'));
         modal.show();
     }
 
     async function blockIP() {
+        if (window.CDS && !CDS.requirePermission('ip:block')) return;
         const ipAddress = document.getElementById('ipAddress').value;
         const reason = document.getElementById('blockReason').value;
         
@@ -400,57 +384,4 @@
     });
 </script>
 
-<style>
-.threat-item {
-    border-left: 4px solid;
-    padding: 15px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.9);
-    transition: all 0.3s ease;
-}
-
-.threat-item:hover {
-    transform: translateX(5px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.threat-item.high-risk {
-    border-left-color: #dc3545;
-}
-
-.threat-item.medium-risk {
-    border-left-color: #ffc107;
-}
-
-.threat-item.low-risk {
-    border-left-color: #17a2b8;
-}
-
-.timeline-item {
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.timeline-item:last-child {
-    border-bottom: none;
-}
-
-.metric-card {
-    transition: transform 0.2s ease-in-out;
-}
-
-.metric-card:hover {
-    transform: translateY(-5px);
-}
-
-.metric-value {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: #002623;
-}
-
-.chart-container {
-    position: relative;
-}
-</style>
 {% endblock %}

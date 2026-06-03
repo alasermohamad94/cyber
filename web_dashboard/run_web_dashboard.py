@@ -46,14 +46,19 @@ def main():
         input("Press Enter to exit...")
         return
 
-    from security.config import get_bind_host, get_bind_port
+    from security.config import env_loaded_path, get_bind_host, get_bind_port, get_login_display_info
 
     host = get_bind_host()
     port = get_bind_port()
+    env_path = env_loaded_path()
     print("\nStarting web dashboard...")
     print(f"Login:     http://{host}:{port}/login")
     print(f"Dashboard: http://{host}:{port}/web_dashboard  (after login)")
-    print("Default login: admin / changeme (override via CDS_ADMIN_* env vars)")
+    if env_path:
+        print(f"Config:    loaded {env_path}")
+    print("Accounts (use these passwords on this machine):")
+    for acc in get_login_display_info():
+        print(f"  - {acc['username']} / {acc['password_hint']}  ({acc['role_label']})")
     print("Press Ctrl+C to stop the server")
     print("=" * 50)
 

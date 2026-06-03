@@ -41,7 +41,16 @@ from security.auth import (
     require_permission,
     verify_credentials,
 )
-from security.config import demo_mode_enabled, get_bind_host, get_bind_port, get_cors_origins, get_secret_key
+from security.config import (
+    demo_mode_enabled,
+    env_loaded_path,
+    get_bind_host,
+    get_bind_port,
+    get_cors_origins,
+    get_login_display_info,
+    get_secret_key,
+)
+from security.roles import Role, permissions_for_role, role_has_permission
 from workers.background_queue import get_background_queue
 from security.firewall import apply_firewall_block, remove_firewall_block, validate_ip
 from storage.persistence import get_store
@@ -53,6 +62,22 @@ app.config["SECRET_KEY"] = get_secret_key()
 socketio = SocketIO(app, cors_allowed_origins=get_cors_origins(), async_mode="threading")
 
 _store = get_store()
+
+
+def _cds_has_perm(permission: str) -> bool:
+    if not is_authenticated():
+        return False
+    return role_has_permission(get_current_role(), permission)
+
+
+@app.context_processor
+def inject_rbac():
+    role = get_current_role() if is_authenticated() else ""
+    return {
+        "cds_role": role,
+        "cds_permissions": permissions_for_role(role) if role else [],
+        "cds_has_perm": _cds_has_perm,
+    }
 
 
 @dataclass
@@ -317,10 +342,20 @@ def login():
         if role:
             login_user(username, role)
             return redirect(url_for("index"))
-        return render_template("login.html", error="بيانات الدخول غير صحيحة")
+        return render_template(
+            "login.html",
+            error="بيانات الدخول غير صحيحة. راجع جدول كلمات المرور أدناه (قد تكون مُعرّفة في .env أو CDS_*_PASSWORD).",
+            accounts=get_login_display_info(),
+            env_file=env_loaded_path(),
+        )
     if is_authenticated():
         return redirect(url_for("index"))
-    return render_template("login.html", error=None)
+    return render_template(
+        "login.html",
+        error=None,
+        accounts=get_login_display_info(),
+        env_file=env_loaded_path(),
+    )
 
 
 @app.route("/logout")
@@ -363,9 +398,13 @@ def settings():
 @app.route("/api/session-info")
 @api_login_required
 def session_info():
+    role = get_current_role()
+    perms = permissions_for_role(role)
     return jsonify({
         "username": session.get("username"),
-        "role": get_current_role(),
+        "role": role,
+        "permissions": perms,
+        "demo_mode": demo_mode_enabled(),
         "demo_mode_available": demo_mode_enabled(),
     })
 

@@ -1,29 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %}Settings - Cyber Defense System{% endblock %}
+{% block title %}الإعدادات — نظام الدفاع السيبراني{% endblock %}
+{% block page_title %}الإعدادات{% endblock %}
+{% block page_subtitle_text %}تفضيلات النظام وعقد المؤشرات (Metric Contract){% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card bg-secondary text-white">
-                <div class="card-body py-3">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <h4 class="mb-0"><i class="fas fa-cog"></i> Settings</h4>
-                            <p class="mb-0">Configure system settings and preferences</p>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <button class="btn btn-light" onclick="saveSettings()">
-                                <i class="fas fa-save"></i> Save Settings
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="cds-page-hero">
+    <div>
+        <h2><i class="fas fa-cog"></i> إعدادات النظام</h2>
+        <p>مرجع التقرير: P0 أمان · P1 عقد المقاييس · P2 التخزين الدائم</p>
     </div>
+    <div class="cds-hero-actions">
+        {% if cds_has_perm('settings:write') %}
+        <button class="btn btn-light btn-sm" data-permission="settings:write" onclick="saveSettings()">
+            <i class="fas fa-save"></i> حفظ
+        </button>
+        {% else %}
+        <span class="badge bg-secondary">عرض فقط — التعديل للمدير</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="container-fluid px-0">
 
     <!-- Settings Tabs -->
     <div class="row mb-4">
@@ -122,6 +120,23 @@
 
         <!-- Security Settings -->
         <div class="tab-pane fade" id="security" role="tabpanel">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-table"></i> عقد المؤشرات (Metric Contract — P1)</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr><th>المؤشر</th><th>المصدر</th><th>API</th><th>الدقة</th></tr>
+                            </thead>
+                            <tbody id="metricsContractBody">
+                                <tr><td colspan="4" class="text-center text-muted">جاري التحميل...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
             <div class="row">
                 <div class="col-lg-6">
                     <div class="card">
@@ -277,11 +292,22 @@
         loadCurrentSettings();
     });
 
-    function loadCurrentSettings() {
-        console.log('Loading current settings...');
+    async function loadCurrentSettings() {
+        try {
+            const mc = await fetchAPI('/metrics-contract');
+            const el = document.getElementById('metricsContractBody');
+            if (el && mc.contract) {
+                el.innerHTML = mc.contract.map(m =>
+                    `<tr><td><code>${m.name}</code></td><td>${m.source}</td><td>${m.endpoint}</td><td>${m.precision}</td></tr>`
+                ).join('');
+            }
+        } catch (e) {
+            console.warn('metrics-contract', e);
+        }
     }
 
     function saveSettings() {
+        if (window.CDS && !CDS.requirePermission('settings:write')) return;
         showNotification('Saving settings...', 'info');
         
         setTimeout(() => {
