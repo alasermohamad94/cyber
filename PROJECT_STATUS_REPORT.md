@@ -1,6 +1,11 @@
 # 🛡️ Cyber Defense System - Comprehensive Status Report
 
-> **تنبيه (2026-05-21):** هذا الملف يصف حالة قديمة مبالغ فيها. المرجع الحالي للتنفيذ: `تقرير_شامل_التنفيذ.md` و`README.md`. الواجهة التشغيلية الرسمية: `web_dashboard/` (وليس CLI فقط). الكشف يعتمد على rule-engine + ML shadow وليس نماذج ML إنتاجية كاملة.
+> **تنبيه (2026-06-03):** هذا الملف **إنجليزي وقديم** ويبالغ في حالة «Production Ready». المرجع الحالي بالعربية:
+> - [`تقرير_المتغيرات_والموانع_والمتطلبات.md`](تقرير_المتغيرات_والموانع_والمتطلبات.md)
+> - [`تقرير_المتغيرات.md`](تقرير_المتغيرات.md)
+> - [`RENDER_DEPLOY.md`](RENDER_DEPLOY.md) للاستضافة على Render
+>
+> الواجهة الرسمية: **`web_dashboard/`** (عربي RTL، RBAC: admin/analyst/viewer). الاختبارات: **22/22**. الكشف: rule-engine + ML shadow.
 
 ## 📊 **Project Status: ✅ COMPLETE & PRODUCTION READY**
 
