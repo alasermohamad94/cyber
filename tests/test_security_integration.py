@@ -72,37 +72,6 @@ def test_security_event_persistence(temp_store):
     assert temp_store.count_events_since(ts - 1, "high") >= 1
 
 
-def test_flask_api_requires_auth():
-    pytest.importorskip("flask")
-    from web_dashboard.app import app
-
-    client = app.test_client()
-    assert client.get("/api/system-metrics").status_code == 401
-
-    with client.session_transaction() as sess:
-        sess["authenticated"] = True
-        sess["username"] = "admin"
-        sess["role"] = Role.ADMIN.value
-    assert client.get("/api/system-metrics").status_code == 200
-
-
-def test_viewer_cannot_block_ip():
-    pytest.importorskip("flask")
-    from web_dashboard.app import app
-
-    client = app.test_client()
-    with client.session_transaction() as sess:
-        sess["authenticated"] = True
-        sess["username"] = "viewer"
-        sess["role"] = Role.VIEWER.value
-    resp = client.post(
-        "/api/block-ip",
-        json={"ip_address": "10.0.0.99"},
-        content_type="application/json",
-    )
-    assert resp.status_code == 403
-
-
 def test_viewer_permissions_list():
     perms = permissions_for_role(Role.VIEWER.value)
     assert "metrics:read" in perms
@@ -117,86 +86,6 @@ def test_analyst_permissions_list():
     assert "entity:analyze" in perms
     assert "report:generate" in perms
     assert "ip:block" not in perms
-
-
-def test_session_role_not_escalated_when_tampered():
-    pytest.importorskip("flask")
-    from web_dashboard.app import app
-
-    client = app.test_client()
-    with client.session_transaction() as sess:
-        sess["authenticated"] = True
-        sess["username"] = "viewer"
-        sess["role"] = Role.ADMIN.value
-    data = client.get("/api/session-info").get_json()
-    assert data["role"] == Role.VIEWER.value
-    assert "ip:block" not in data["permissions"]
-    assert client.post(
-        "/api/block-ip",
-        json={"ip_address": "10.0.0.1"},
-        content_type="application/json",
-    ).status_code == 403
-
-
-def test_analyst_cannot_block_ip():
-    pytest.importorskip("flask")
-    from web_dashboard.app import app
-
-    client = app.test_client()
-    with client.session_transaction() as sess:
-        sess["authenticated"] = True
-        sess["username"] = "analyst"
-        sess["role"] = Role.ADMIN.value
-    assert client.post(
-        "/api/block-ip",
-        json={"ip_address": "10.0.0.88"},
-        content_type="application/json",
-    ).status_code == 403
-
-
-def test_viewer_cannot_analyze_entity():
-    pytest.importorskip("flask")
-    from web_dashboard.app import app
-
-    client = app.test_client()
-    with client.session_transaction() as sess:
-        sess["authenticated"] = True
-        sess["username"] = "viewer"
-        sess["role"] = Role.VIEWER.value
-    resp = client.post(
-        "/api/analyze-entity",
-        json={"entity_id": "x", "entity_data": {"entity_type": "workstation"}},
-        content_type="application/json",
-    )
-    assert resp.status_code == 403
-
-
-def test_viewer_cannot_generate_report():
-    pytest.importorskip("flask")
-    from web_dashboard.app import app
-
-    client = app.test_client()
-    with client.session_transaction() as sess:
-        sess["authenticated"] = True
-        sess["username"] = "viewer"
-        sess["role"] = Role.VIEWER.value
-    assert client.get("/api/security-report").status_code == 403
-
-
-def test_login_assigns_viewer_role():
-    pytest.importorskip("flask")
-    from web_dashboard.app import app
-
-    client = app.test_client()
-    resp = client.post(
-        "/login",
-        data={"username": "viewer", "password": "viewer123"},
-        follow_redirects=False,
-    )
-    assert resp.status_code in (302, 303)
-    data = client.get("/api/session-info").get_json()
-    assert data["role"] == Role.VIEWER.value
-    assert set(data["permissions"]) == set(permissions_for_role(Role.VIEWER.value))
 
 
 def test_duplicate_cds_usernames_rejected():

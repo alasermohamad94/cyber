@@ -15,7 +15,7 @@ _ENV_LOADED_FROM: Optional[str] = None
 
 def load_env_files() -> Optional[str]:
     """
-    Load .env from project root and web_dashboard/ (does not override existing env vars).
+    Load .env from project root (does not override existing env vars).
     Returns path of the first file loaded, or None.
     """
     global _ENV_LOADED_FROM
@@ -24,7 +24,6 @@ def load_env_files() -> Optional[str]:
 
     candidates = [
         _PROJECT_ROOT / ".env",
-        _PROJECT_ROOT / "web_dashboard" / ".env",
     ]
     for path in candidates:
         if not path.is_file():
@@ -77,7 +76,10 @@ def get_bind_port() -> int:
 
 
 def get_cors_origins() -> list:
-    raw = os.environ.get("CDS_CORS_ORIGINS", "http://127.0.0.1:8080,http://localhost:8080")
+    raw = os.environ.get(
+        "CDS_CORS_ORIGINS",
+        "http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:5173,http://localhost:5173",
+    )
     return [o.strip() for o in raw.split(",") if o.strip()]
 
 

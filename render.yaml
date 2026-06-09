@@ -1,16 +1,15 @@
-# Render.com — نشر لوحة الويب (مجاني)
-# اربط المستودع: https://github.com/alasermohamad94/cyber
-# ثم: New > Blueprint > اختر هذا الملف أو Web Service يدوياً
+# Render.com — FastAPI backend + PostgreSQL
+# Frontend: build locally or via static site service pointing to frontend/dist
 
 services:
   - type: web
-    name: cyber-defense-dashboard
+    name: cyber-defense-api
     runtime: python
     plan: free
-    rootDir: web_dashboard
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --worker-class gthread --threads 4 --timeout 120 wsgi:application
-    healthCheckPath: /login
+    rootDir: .
+    buildCommand: pip install -r requirements.txt && cd frontend && npm ci && npm run build
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"
@@ -18,6 +17,10 @@ services:
         value: "0.0.0.0"
       - key: CDS_SECRET_KEY
         generateValue: true
+      - key: CDS_DATABASE_URL
+        fromDatabase:
+          name: cyber-defense-db
+          property: connectionString
       - key: CDS_ADMIN_USER
         value: admin
       - key: CDS_ADMIN_PASSWORD
@@ -34,3 +37,9 @@ services:
         sync: false
       - key: CDS_FIREWALL_ENABLED
         value: "false"
+
+databases:
+  - name: cyber-defense-db
+    plan: free
+    databaseName: cyber_defense
+    user: cds

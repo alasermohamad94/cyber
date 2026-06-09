@@ -307,13 +307,27 @@ class SecurityStore:
                 conn.close()
 
 
-_store: Optional[SecurityStore] = None
+_store = None
 _store_lock = threading.Lock()
 
 
-def get_store() -> SecurityStore:
+def get_store():
+    """Return SQLite store (CDS_DB_PATH) or PostgreSQL store (CDS_DATABASE_URL)."""
     global _store
     with _store_lock:
         if _store is None:
-            _store = SecurityStore()
+            db_url = os.environ.get("CDS_DATABASE_URL", "").strip()
+            if db_url:
+                from storage.postgres_store import PostgresSecurityStore
+
+                _store = PostgresSecurityStore(db_url)
+            else:
+                _store = SecurityStore()
         return _store
+
+
+def reset_store() -> None:
+    """Clear cached store (for tests)."""
+    global _store
+    with _store_lock:
+        _store = None
