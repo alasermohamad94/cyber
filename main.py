@@ -103,7 +103,15 @@ class CyberDefenseSystem:
         
         # Step 4: Decision Engine - Make security decision
         print("[Decision Engine] Making security decision...")
-        decision = make_decision(behavior_profile, attack_prediction, new_trust, ml_advisory)
+        decision = make_decision(
+            behavior_profile,
+            attack_prediction,
+            new_trust,
+            ml_advisory,
+            correlation=asdict(correlation),
+            risk_score=trust_record.get('risk_score', 0.0),
+            risk_level=trust_record.get('risk_level', 'low'),
+        )
         print(f"   Decision: {decision['action']}")
         print(f"   Severity: {decision['severity']}")
         
