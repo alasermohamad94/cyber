@@ -140,6 +140,9 @@ class TrustRecord:
         }
 
 
+TRUST_RECOVERY_CLEAN_HOURS = 24
+
+
 class TrustManager:
     """
     Manages trust scores and risk-related operations for entities.
@@ -350,6 +353,8 @@ class TrustManager:
         current_trust: float,
         incident_type: str,
         incident_severity: str,
+        entity_id: str = "",
+        behavior_history: Optional[List[float]] = None,
     ) -> float:
         """
         Adjust trust according to the current risk score.
@@ -359,6 +364,8 @@ class TrustManager:
         """
         if risk_score < 20:
             adjustment = self.positive_boost
+            if entity_id and self._can_auto_recover(entity_id, behavior_history or []):
+                adjustment = self.positive_boost * 1.5
         elif risk_score < 35:
             adjustment = self.positive_boost * 0.5
         elif risk_score < 55:
@@ -380,6 +387,52 @@ class TrustManager:
             final_adjustment *= incident_factor * severity_factor
 
         return final_adjustment
+
+    def _can_auto_recover(self, entity_id: str, behavior_history: List[float]) -> bool:
+        """Trust recovery: 24h clean period with no suspicious behavior."""
+        if not behavior_history:
+            return True
+        clean_threshold = 40.0
+        if any(score >= clean_threshold for score in behavior_history[-5:]):
+            return False
+        record = self.trust_records.get(entity_id)
+        if not record:
+            return True
+        hours_since = (time.time() - record.last_updated) / 3600.0
+        return hours_since >= TRUST_RECOVERY_CLEAN_HOURS and record.risk_score < 30.0
+
+    def manual_trust_recovery(self, entity_id: str, analyst: str, note: str = "") -> bool:
+        """Documented analyst-driven trust recovery."""
+        with self._lock:
+            if entity_id not in self.trust_records:
+                return False
+            rec = self.trust_records[entity_id]
+            updated = TrustRecord(
+                entity_id=entity_id,
+                trust_score=min(100.0, rec.trust_score + 20.0),
+                last_updated=time.time(),
+                behavior_history=[],
+                trust_trend="improving",
+                risk_level="low",
+                risk_score=max(0.0, rec.risk_score - 30.0),
+                asset_type=rec.asset_type,
+                asset_criticality=rec.asset_criticality,
+                last_incident_type="behavior_anomaly",
+                last_incident_severity="low",
+            )
+            self.trust_records[entity_id] = updated
+            self._store.save_trust_record(updated.to_dict())
+            try:
+                from security.audit_chain import get_audit_chain
+
+                get_audit_chain().append(
+                    "trust_recovery_manual",
+                    analyst,
+                    {"entity_id": entity_id, "note": note},
+                )
+            except ImportError:
+                pass
+            return True
 
     def update_trust_score(
         self,
@@ -433,6 +486,8 @@ class TrustManager:
             current_trust,
             incident_type,
             incident_severity,
+            entity_id=entity_id,
+            behavior_history=behavior_history,
         )
         new_trust = max(0.0, min(100.0, current_trust + adjustment))
 

@@ -8,6 +8,7 @@ from security.fastapi_auth import (
     require_auth,
     session_info_payload,
 )
+from security.session_registry import get_session_registry
 
 router = APIRouter(tags=["auth"])
 
@@ -27,6 +28,11 @@ async def api_login(
             "env_file": env_loaded_path(),
         }
     login_user_session(request, username, role)
+    session_token = request.session.get("session_id") or str(id(request.session))
+    request.session["session_id"] = session_token
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    get_session_registry().register(username, role, client_ip, user_agent, session_token)
     return {"success": True, **session_info_payload(request)}
 
 

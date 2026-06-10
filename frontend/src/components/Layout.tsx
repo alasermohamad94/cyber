@@ -4,9 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import { ROLE_LABELS } from '../utils/cds';
 
 const PAGE_META: Record<string, { title: string; subtitle: string }> = {
-  '/': { title: 'لوحة التحكم', subtitle: 'مقاييس النظام والأمان — مصدر API حي (P1)' },
+  '/': { title: 'مركز عمليات SOC', subtitle: 'لوحة القيادة الموحدة — مستوى التهديد والحوادث' },
   '/analytics': { title: 'التحليلات', subtitle: 'أداء النظام والأمان — /api/analytics-overview (P1)' },
   '/threats': { title: 'إدارة التهديدات', subtitle: 'تهديدات وIPs محظورة — /api/threat-overview (P1)' },
+  '/incidents': { title: 'إدارة الحوادث', subtitle: 'دورة حياة الحوادث والاستجابة' },
+  '/entities': { title: 'مركز الثقة', subtitle: 'الكيانات، حساسية الأصول، نقاط المخاطر' },
+  '/monitor': { title: 'المراقبة الفورية', subtitle: 'بث حي للأحداث والتنبيهات' },
+  '/firewall': { title: 'جدار الحماية', subtitle: 'الحظر، العزل، والموافقات' },
+  '/replay': { title: 'التحليل الجنائي', subtitle: 'إعادة تمثيل الأحداث' },
+  '/investigation': { title: 'التحقيق', subtitle: 'مساحة عمل القضايا الأمنية' },
   '/settings': { title: 'الإعدادات', subtitle: 'تفضيلات النظام وعقد المؤشرات (Metric Contract)' },
 };
 
@@ -81,13 +87,28 @@ export default function Layout() {
         </div>
         <nav className="cds-nav">
           <NavLink to="/" end className={({ isActive }) => `cds-nav-link${isActive ? ' active' : ''}`}>
-            <i className="fas fa-tachometer-alt" /> لوحة التحكم
+            <i className="fas fa-tachometer-alt" /> مركز SOC
+          </NavLink>
+          <NavLink to="/incidents" className={({ isActive }) => `cds-nav-link${isActive ? ' active' : ''}`}>
+            <i className="fas fa-exclamation-circle" /> الحوادث
+          </NavLink>
+          <NavLink to="/entities" className={({ isActive }) => `cds-nav-link${isActive ? ' active' : ''}`}>
+            <i className="fas fa-fingerprint" /> الثقة
+          </NavLink>
+          <NavLink to="/monitor" className={({ isActive }) => `cds-nav-link${isActive ? ' active' : ''}`}>
+            <i className="fas fa-broadcast-tower" /> المراقبة
+          </NavLink>
+          <NavLink to="/firewall" className={({ isActive }) => `cds-nav-link${isActive ? ' active' : ''}`}>
+            <i className="fas fa-fire" /> الجدار
+          </NavLink>
+          <NavLink to="/investigation" className={({ isActive }) => `cds-nav-link${isActive ? ' active' : ''}`}>
+            <i className="fas fa-search" /> التحقيق
           </NavLink>
           <NavLink to="/analytics" className={({ isActive }) => `cds-nav-link${isActive ? ' active' : ''}`}>
             <i className="fas fa-chart-line" /> التحليلات
           </NavLink>
           <NavLink to="/threats" className={({ isActive }) => `cds-nav-link${isActive ? ' active' : ''}`}>
-            <i className="fas fa-shield-virus" /> إدارة التهديدات
+            <i className="fas fa-shield-virus" /> التهديدات
           </NavLink>
           <NavLink to="/settings" className={({ isActive }) => `cds-nav-link${isActive ? ' active' : ''}`}>
             <i className="fas fa-cog" /> الإعدادات

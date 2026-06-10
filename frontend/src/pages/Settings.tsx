@@ -1,16 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api/client';
 
 export default function Settings() {
   const { session, hasPermission } = useAuth();
   const [contract, setContract] = useState<unknown[]>([]);
+  const [sessions, setSessions] = useState<Record<string, unknown>[]>([]);
+  const [auditValid, setAuditValid] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL || ''}/api/metrics-contract`, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d?.contract && setContract(d.contract))
       .catch(() => {});
-  }, []);
+    if (hasPermission('sessions:manage')) {
+      api.listSessions().then((d) => setSessions(d.sessions)).catch(() => {});
+    }
+    if (hasPermission('audit:verify')) {
+      api.verifyAudit().then((d) => setAuditValid(Boolean(d.valid))).catch(() => {});
+    }
+  }, [hasPermission]);
 
   return (
     <>
@@ -87,7 +96,7 @@ export default function Settings() {
           </div>
 
           <div className="tab-pane fade" id="security">
-            <div className="card">
+            <div className="card mb-3">
               <div className="card-header"><h5 className="mb-0"><i className="fas fa-key" /> الصلاحيات</h5></div>
               <div className="card-body">
                 <div className="d-flex flex-wrap gap-2">
@@ -97,6 +106,35 @@ export default function Settings() {
                 </div>
               </div>
             </div>
+            {auditValid != null && (
+              <div className={`alert ${auditValid ? 'alert-success' : 'alert-danger'}`}>
+                سلامة سجل التدقيق (Hash Chain): {auditValid ? 'سليم' : 'تلف مكتشف'}
+              </div>
+            )}
+            {hasPermission('sessions:manage') && (
+              <div className="card">
+                <div className="card-header"><h5 className="mb-0"><i className="fas fa-users" /> الجلسات النشطة</h5></div>
+                <div className="card-body table-responsive">
+                  <table className="table table-sm">
+                    <thead><tr><th>المستخدم</th><th>IP</th><th>آخر نشاط</th><th></th></tr></thead>
+                    <tbody>
+                      {sessions.map((s) => (
+                        <tr key={String(s.session_id)}>
+                          <td>{String(s.username)}</td>
+                          <td>{String(s.ip_address)}</td>
+                          <td>{String(s.last_activity_formatted || '')}</td>
+                          <td>
+                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => api.revokeSession(String(s.session_id)).then(() => api.listSessions().then((d) => setSessions(d.sessions)))}>
+                              إلغاء
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="tab-pane fade" id="metrics">

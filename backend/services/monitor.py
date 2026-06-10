@@ -135,7 +135,7 @@ class WebServerMonitor:
         target_entity: str,
         description: str,
         action_taken: str,
-    ):
+    ) -> str:
         with self._lock:
             event = SecurityEvent(
                 event_id=f"evt_{int(time.time())}_{len(self.security_events)}",
@@ -162,6 +162,21 @@ class WebServerMonitor:
                     "status": event.status,
                 }
             )
+            try:
+                from security.audit_chain import get_audit_chain
+
+                get_audit_chain().append(
+                    "security_event",
+                    "system",
+                    {
+                        "event_id": event.event_id,
+                        "event_type": event_type,
+                        "severity": severity,
+                        "description": description,
+                    },
+                )
+            except Exception:
+                pass
             if severity in ("high", "critical"):
                 self.alerts.append(
                     {
@@ -170,6 +185,7 @@ class WebServerMonitor:
                         "event_id": event.event_id,
                     }
                 )
+            return event.event_id
 
     def get_metrics_summary(self) -> dict:
         with self._lock:
@@ -201,7 +217,7 @@ class WebServerMonitor:
             )
             correlation = result.get("correlation", {})
             if correlation.get("correlated"):
-                self.add_security_event(
+                corr_event = self.add_security_event(
                     event_type=correlation.get("incident_type", "correlated_incident"),
                     severity=correlation.get("severity", result["decision"]["severity"]),
                     source_ip=correlation.get("source_ip", entity_data.get("source_ip", "")),
@@ -212,6 +228,21 @@ class WebServerMonitor:
                     ),
                     action_taken=result["decision"]["action"],
                 )
+                try:
+                    from soc.incident_manager import get_incident_manager
+                    from decision_engine.escalation import get_escalation_manager
+
+                    event_ids = [corr_event] if corr_event else []
+                    incident = get_incident_manager().create_from_correlation(
+                        correlation, entity_id, event_ids=event_ids
+                    )
+                    if result["decision"].get("action") == "alert":
+                        get_escalation_manager().register_alert(
+                            entity_id, incident["incident_id"], "alert"
+                        )
+                    result["incident"] = incident
+                except Exception:
+                    pass
             return result
         except Exception as exc:
             return {"error": str(exc), "entity_id": entity_id, "timestamp": time.time()}

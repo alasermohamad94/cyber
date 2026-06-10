@@ -506,9 +506,38 @@ def make_decision(
             f" {ml_advisory.get('model_version', 'n/a')})."
         )
 
+    from decision_engine.security_policies import apply_policy_overrides, requires_two_man_approval
+
+    policy_ctx = {
+        **policy_evaluation.context_snapshot,
+        "asset_type": behavior_profile.get("asset_type")
+        if isinstance(behavior_profile, dict)
+        else getattr(behavior_profile, "asset_type", "employee_device"),
+        "asset_criticality": behavior_profile.get("asset_criticality", 1.0)
+        if isinstance(behavior_profile, dict)
+        else getattr(behavior_profile, "asset_criticality", 1.0),
+        "external_connection": behavior_profile.get("external_connection", False)
+        if isinstance(behavior_profile, dict)
+        else False,
+    }
+    override = apply_policy_overrides(
+        selected_rule.action, selected_rule.severity, policy_ctx
+    )
+    final_action = override["action"]
+    final_severity = override["severity"]
+    if override.get("policy_applied"):
+        reasoning += f" Policy override applied: {override.get('policy_description', '')}."
+
+    needs_approval = requires_two_man_approval(
+        final_action, policy_ctx.get("asset_type", "employee_device")
+    )
+    if needs_approval:
+        final_action = "alert"
+        reasoning += " Critical asset action deferred pending two-man approval."
+
     decision = SecurityDecision(
-        action=selected_rule.action,
-        severity=selected_rule.severity,
+        action=final_action,
+        severity=final_severity,
         confidence=confidence,
         reasoning=reasoning,
     )
@@ -517,6 +546,8 @@ def make_decision(
     if ml_advisory:
         result["ml_advisory"] = dict(ml_advisory)
     result["policy_evaluation"] = policy_evaluation.to_dict()
+    result["policy_override"] = override
+    result["requires_approval"] = needs_approval
     return result
 
 

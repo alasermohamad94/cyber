@@ -17,6 +17,7 @@ export default function Dashboard() {
   const perfChart = useRef<ChartInstance | null>(null);
   const riskChart = useRef<ChartInstance | null>(null);
 
+  const [socData, setSocData] = useState<Record<string, unknown> | null>(null);
   const [metrics, setMetrics] = useState({
     cpu: 0,
     memory: 0,
@@ -34,7 +35,11 @@ export default function Dashboard() {
   });
 
   const load = useCallback(async () => {
-    const [m, s] = await Promise.all([api.systemMetrics(), api.securityOverview()]);
+    const [m, s, soc] = await Promise.all([
+      api.systemMetrics(),
+      api.securityOverview(),
+      api.socCommandCenter().catch(() => null),
+    ]);
     setMetrics({
       cpu: Number(m.cpu_percent) || 0,
       memory: Number(m.memory_percent) || 0,
@@ -51,6 +56,8 @@ export default function Dashboard() {
       risk_distribution: (trust.risk_distribution as typeof security.risk_distribution) || security.risk_distribution,
       recent_events: (s.recent_events as SecurityEvent[]) || [],
     });
+
+    if (soc) setSocData(soc);
 
     if (perfChart.current && m.cpu_percent != null) {
       const now = new Date().toLocaleTimeString();
@@ -170,6 +177,32 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {socData && (
+        <div className="row g-3 mb-4">
+          <div className="col-md-3">
+            <div className={`cds-kpi cds-threat-${socData.threat_level}`}>
+              <div className="cds-kpi-label">مستوى التهديد</div>
+              <div className="cds-kpi-value text-uppercase">{String(socData.threat_level)}</div>
+            </div>
+          </div>
+          {socData.incident_stats && (
+            <>
+              {Object.entries((socData.incident_stats as Record<string, unknown>).by_status as Record<string, number> || {}).map(([k, v]) => (
+                <div key={k} className="col-md-2">
+                  <div className="cds-kpi"><div className="cds-kpi-value">{v}</div><div className="cds-kpi-label">{k}</div></div>
+                </div>
+              ))}
+            </>
+          )}
+          <div className="col-md-3">
+            <div className="cds-kpi">
+              <div className="cds-kpi-value">{socData.audit_chain_valid ? '✓' : '✗'}</div>
+              <div className="cds-kpi-label">سلسلة التدقيق</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="cds-kpi-grid">
         <div className="cds-kpi">

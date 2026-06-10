@@ -15,7 +15,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from backend.routes import auth, metrics, security  # noqa: E402
+from backend.routes import auth, metrics, security, soc  # noqa: E402
 from backend.services.monitor import format_duration, monitor  # noqa: E402
 from security.config import get_bind_host, get_bind_port, get_cors_origins, get_secret_key  # noqa: E402
 from security.fastapi_auth import is_authenticated  # noqa: E402
@@ -44,6 +44,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(metrics.router)
 app.include_router(security.router)
+app.include_router(soc.router)
 
 
 @app.get("/api/health")
@@ -123,10 +124,34 @@ async def _security_alert_broadcaster():
             await asyncio.sleep(10)
 
 
+async def _escalation_worker():
+    from decision_engine.escalation import get_escalation_manager
+    from response.engine import execute_response
+    from security.firewall_providers import expire_stale_blocks
+
+    while True:
+        try:
+            escalated = get_escalation_manager().check_pending_escalations()
+            for item in escalated:
+                execute_response(
+                    item["entity_id"],
+                    {
+                        "action": "block",
+                        "severity": "high",
+                        "reasoning": item["reason"],
+                    },
+                )
+            expire_stale_blocks()
+        except Exception:
+            pass
+        await asyncio.sleep(60)
+
+
 @app.on_event("startup")
 async def startup():
     get_background_queue()
     asyncio.create_task(_security_alert_broadcaster())
+    asyncio.create_task(_escalation_worker())
 
 
 _frontend_dist = os.path.join(PROJECT_ROOT, "frontend", "dist")

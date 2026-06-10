@@ -357,6 +357,10 @@ body.cds-has-demo .cds-topbar {
     transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
+.cds-rtm-kpis .cds-kpi {
+    color: rgba(0, 64, 52, 1);
+}
+
 .cds-kpi::before {
     content: '';
     position: absolute;

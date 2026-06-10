@@ -62,4 +62,53 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ entity_id, entity_data }),
     }),
+  socCommandCenter: () => request<Record<string, unknown>>('/api/soc/command-center'),
+  listIncidents: (params?: { status?: string; severity?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.status) q.set('status', params.status);
+    if (params?.severity) q.set('severity', params.severity);
+    const qs = q.toString();
+    return request<{ incidents: Record<string, unknown>[] }>(`/api/incidents${qs ? `?${qs}` : ''}`);
+  },
+  getIncident: (id: string) => request<Record<string, unknown>>(`/api/incidents/${id}`),
+  createIncidentFromEvent: (eventId: string) =>
+    request(`/api/incidents/from-event/${eventId}`, { method: 'POST' }),
+  updateIncident: (id: string, body: Record<string, unknown>) =>
+    request(`/api/incidents/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  listCases: () => request<{ cases: Record<string, unknown>[] }>('/api/cases'),
+  getCase: (id: string) => request<Record<string, unknown>>(`/api/cases/${id}`),
+  createCase: (body: Record<string, unknown>) =>
+    request('/api/cases', { method: 'POST', body: JSON.stringify(body) }),
+  mergeCaseIncidents: (caseId: string, incident_ids: string[]) =>
+    request(`/api/cases/${caseId}/merge`, {
+      method: 'POST',
+      body: JSON.stringify({ incident_ids }),
+    }),
+  addCaseNote: (caseId: string, note: string) =>
+    request(`/api/cases/${caseId}/notes`, { method: 'POST', body: JSON.stringify({ note }) }),
+  entityTrust: () => request<{ entities: Record<string, unknown>[] }>('/api/entities/trust'),
+  replayForensics: (body: Record<string, unknown>) =>
+    request('/api/forensics/replay', { method: 'POST', body: JSON.stringify(body) }),
+  verifyAudit: () => request<Record<string, unknown>>('/api/audit/verify'),
+  listPlaybooks: () => request<{ playbooks: Record<string, unknown>[] }>('/api/playbooks'),
+  executePlaybook: (playbook_id: string, context: Record<string, unknown>) =>
+    request('/api/playbooks/execute', {
+      method: 'POST',
+      body: JSON.stringify({ playbook_id, context }),
+    }),
+  firewallProviders: () => request<{ providers: Record<string, unknown>[] }>('/api/firewall/providers'),
+  blockIpOrchestrated: (ip_address: string, reason: string, provider: string, ttl_seconds: number) =>
+    request('/api/firewall/block', {
+      method: 'POST',
+      body: JSON.stringify({ ip_address, reason, provider, ttl_seconds }),
+    }),
+  listQuarantine: () => request<{ quarantine: Record<string, unknown>[] }>('/api/quarantine'),
+  releaseQuarantine: (id: string) => request(`/api/quarantine/${id}/release`, { method: 'POST' }),
+  listPendingApprovals: () => request<{ approvals: Record<string, unknown>[] }>('/api/approvals/pending'),
+  listSessions: () => request<{ sessions: Record<string, unknown>[] }>('/api/sessions'),
+  revokeSession: (sessionId: string) =>
+    request(`/api/sessions/${sessionId}/revoke`, { method: 'POST' }),
+  realtimeEvents: () => request<{ events: Record<string, unknown>[]; alerts: Record<string, unknown>[] }>(
+    '/api/soc/realtime-events'
+  ),
 };
