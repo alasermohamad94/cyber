@@ -19,7 +19,7 @@ from prediction.attack_prediction import predict_attack, AttackPrediction
 from decision_engine.descision_engine import make_decision
 from prediction.model_inference import build_feature_vector, shadow_predict
 from response.engine import execute_response
-from trust_system.trust_manager import update_trust_score
+from trust_system.trust_manager import get_trust_record, update_trust_score
 
 
 class CyberDefenseSystem:
@@ -73,7 +73,9 @@ class CyberDefenseSystem:
         current_trust = self.entity_trust_scores.get(entity_id, 100.0)
         new_trust = update_trust_score(entity_id, behavior_profile.behavior_score, current_trust)
         self.entity_trust_scores[entity_id] = new_trust
+        trust_record = get_trust_record(entity_id) or {}
         print(f"   Trust Score: {new_trust:.1f}")
+        print(f"   Risk Score: {trust_record.get('risk_score', 0.0):.1f}")
         
         # Step 4: Decision Engine - Make security decision
         print("[Decision Engine] Making security decision...")
@@ -103,6 +105,8 @@ class CyberDefenseSystem:
             'behavior_profile': asdict(behavior_profile),
             'attack_prediction': asdict(attack_prediction),
             'trust_score': new_trust,
+            'risk_score': trust_record.get('risk_score', 0.0),
+            'risk_level': trust_record.get('risk_level', 'low'),
             'decision': decision,
             'ml_advisory': ml_advisory,
             'response': response_result,

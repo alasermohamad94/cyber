@@ -53,7 +53,8 @@ class SecurityStore:
                         last_updated REAL NOT NULL,
                         behavior_history TEXT,
                         trust_trend TEXT,
-                        risk_level TEXT
+                        risk_level TEXT,
+                        risk_score REAL DEFAULT 0
                     );
                     CREATE TABLE IF NOT EXISTS response_actions (
                         action_id TEXT PRIMARY KEY,
@@ -75,9 +76,22 @@ class SecurityStore:
                     CREATE INDEX IF NOT EXISTS idx_responses_status ON response_actions(status);
                     """
                 )
+                self._ensure_column_exists(conn, "trust_records", "risk_score", "REAL DEFAULT 0")
                 conn.commit()
             finally:
                 conn.close()
+
+    def _ensure_column_exists(
+        self, conn: sqlite3.Connection, table_name: str, column_name: str, column_def: str
+    ) -> None:
+        columns = {
+            row["name"]
+            for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+        }
+        if column_name not in columns:
+            conn.execute(
+                f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_def}"
+            )
 
     def save_security_event(self, event: Dict[str, Any]) -> None:
         with self._lock:
@@ -150,8 +164,8 @@ class SecurityStore:
                     """
                     INSERT OR REPLACE INTO trust_records
                     (entity_id, trust_score, last_updated, behavior_history,
-                     trust_trend, risk_level)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                     trust_trend, risk_level, risk_score)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         record["entity_id"],
@@ -160,6 +174,7 @@ class SecurityStore:
                         json.dumps(record.get("behavior_history", [])),
                         record.get("trust_trend", "stable"),
                         record.get("risk_level", "low"),
+                        record.get("risk_score", 0.0),
                     ),
                 )
                 conn.commit()

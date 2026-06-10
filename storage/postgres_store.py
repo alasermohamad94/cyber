@@ -48,7 +48,8 @@ class PostgresSecurityStore:
                             last_updated DOUBLE PRECISION NOT NULL,
                             behavior_history TEXT,
                             trust_trend TEXT,
-                            risk_level TEXT
+                            risk_level TEXT,
+                            risk_score DOUBLE PRECISION DEFAULT 0
                         );
                         CREATE TABLE IF NOT EXISTS response_actions (
                             action_id TEXT PRIMARY KEY,
@@ -68,6 +69,12 @@ class PostgresSecurityStore:
                         );
                         CREATE INDEX IF NOT EXISTS idx_events_ts ON security_events(timestamp);
                         CREATE INDEX IF NOT EXISTS idx_responses_status ON response_actions(status);
+                        """
+                    )
+                    cur.execute(
+                        """
+                        ALTER TABLE trust_records
+                        ADD COLUMN IF NOT EXISTS risk_score DOUBLE PRECISION DEFAULT 0
                         """
                     )
                 conn.commit()
@@ -158,14 +165,15 @@ class PostgresSecurityStore:
                         """
                         INSERT INTO trust_records
                         (entity_id, trust_score, last_updated, behavior_history,
-                         trust_trend, risk_level)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                         trust_trend, risk_level, risk_score)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (entity_id) DO UPDATE SET
                             trust_score = EXCLUDED.trust_score,
                             last_updated = EXCLUDED.last_updated,
                             behavior_history = EXCLUDED.behavior_history,
                             trust_trend = EXCLUDED.trust_trend,
-                            risk_level = EXCLUDED.risk_level
+                            risk_level = EXCLUDED.risk_level,
+                            risk_score = EXCLUDED.risk_score
                         """,
                         (
                             record["entity_id"],
@@ -174,6 +182,7 @@ class PostgresSecurityStore:
                             json.dumps(record.get("behavior_history", [])),
                             record.get("trust_trend", "stable"),
                             record.get("risk_level", "low"),
+                            record.get("risk_score", 0.0),
                         ),
                     )
                 conn.commit()

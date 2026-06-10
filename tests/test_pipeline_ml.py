@@ -19,4 +19,6 @@ def test_analyze_entity_includes_ml_advisory():
     assert "ml_advisory" in result
     assert result["ml_advisory"].get("enabled") is True
     assert "decision" in result
+    assert "risk_score" in result
+    assert "risk_level" in result
     assert "ml_advisory" in result["decision"] or result["decision"].get("ml_advisory")
