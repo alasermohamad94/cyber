@@ -56,7 +56,9 @@ class SecurityStore:
                         risk_level TEXT,
                         risk_score REAL DEFAULT 0,
                         asset_type TEXT DEFAULT 'employee_device',
-                        asset_criticality REAL DEFAULT 1
+                        asset_criticality REAL DEFAULT 1,
+                        last_incident_type TEXT DEFAULT 'behavior_anomaly',
+                        last_incident_severity TEXT DEFAULT 'low'
                     );
                     CREATE TABLE IF NOT EXISTS response_actions (
                         action_id TEXT PRIMARY KEY,
@@ -84,6 +86,18 @@ class SecurityStore:
                 )
                 self._ensure_column_exists(
                     conn, "trust_records", "asset_criticality", "REAL DEFAULT 1"
+                )
+                self._ensure_column_exists(
+                    conn,
+                    "trust_records",
+                    "last_incident_type",
+                    "TEXT DEFAULT 'behavior_anomaly'",
+                )
+                self._ensure_column_exists(
+                    conn,
+                    "trust_records",
+                    "last_incident_severity",
+                    "TEXT DEFAULT 'low'",
                 )
                 conn.commit()
             finally:
@@ -172,8 +186,9 @@ class SecurityStore:
                     """
                     INSERT OR REPLACE INTO trust_records
                     (entity_id, trust_score, last_updated, behavior_history,
-                     trust_trend, risk_level, risk_score, asset_type, asset_criticality)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     trust_trend, risk_level, risk_score, asset_type, asset_criticality,
+                     last_incident_type, last_incident_severity)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         record["entity_id"],
@@ -185,6 +200,8 @@ class SecurityStore:
                         record.get("risk_score", 0.0),
                         record.get("asset_type", "employee_device"),
                         record.get("asset_criticality", 1.0),
+                        record.get("last_incident_type", "behavior_anomaly"),
+                        record.get("last_incident_severity", "low"),
                     ),
                 )
                 conn.commit()

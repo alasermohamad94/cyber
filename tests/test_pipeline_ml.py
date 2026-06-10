@@ -9,6 +9,8 @@ def test_analyze_entity_includes_ml_advisory():
         "test_entity_ml",
         {
             "asset_type": "database_server",
+            "incident_type": "data_exfiltration",
+            "incident_severity": "critical",
             "connection_rate": 0.9,
             "request_rate": 0.9,
             "failed_auth_count": 80,
@@ -24,4 +26,6 @@ def test_analyze_entity_includes_ml_advisory():
     assert "risk_level" in result
     assert result["asset_type"] == "database_server"
     assert result["asset_criticality"] == 5.0
+    assert result["incident_type"] == "data_exfiltration"
+    assert result["incident_severity"] == "critical"
     assert "ml_advisory" in result["decision"] or result["decision"].get("ml_advisory")

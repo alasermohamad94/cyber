@@ -83,6 +83,8 @@ class CyberDefenseSystem:
         print(f"   Risk Score: {trust_record.get('risk_score', 0.0):.1f}")
         print(f"   Asset Type: {trust_record.get('asset_type', 'employee_device')}")
         print(f"   Asset Criticality: {trust_record.get('asset_criticality', 1.0):.1f}")
+        print(f"   Incident Type: {trust_record.get('last_incident_type', 'behavior_anomaly')}")
+        print(f"   Incident Severity: {trust_record.get('last_incident_severity', 'low')}")
         
         # Step 4: Decision Engine - Make security decision
         print("[Decision Engine] Making security decision...")
@@ -116,6 +118,8 @@ class CyberDefenseSystem:
             'risk_level': trust_record.get('risk_level', 'low'),
             'asset_type': trust_record.get('asset_type', 'employee_device'),
             'asset_criticality': trust_record.get('asset_criticality', 1.0),
+            'incident_type': trust_record.get('last_incident_type', 'behavior_anomaly'),
+            'incident_severity': trust_record.get('last_incident_severity', 'low'),
             'decision': decision,
             'ml_advisory': ml_advisory,
             'response': response_result,

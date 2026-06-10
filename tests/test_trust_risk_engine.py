@@ -94,3 +94,36 @@ def test_database_assets_receive_higher_risk_for_same_behavior(trust_module):
     assert database["asset_criticality"] == 5.0
     assert database["risk_score"] > workstation["risk_score"]
     assert database["risk_level"] in {"high", "critical"}
+
+
+def test_rule_based_decay_uses_incident_type_and_severity(trust_module):
+    manager = trust_module.TrustManager()
+
+    manager.update_trust_score(
+        "scan_entity",
+        60.0,
+        asset_context={
+            "incident_type": "distributed_scan",
+            "incident_severity": "medium",
+            "asset_type": "employee_device",
+        },
+    )
+    scan_record = manager.get_trust_record("scan_entity")
+
+    manager.update_trust_score(
+        "exfil_entity",
+        60.0,
+        asset_context={
+            "incident_type": "data_exfiltration",
+            "incident_severity": "critical",
+            "asset_type": "employee_device",
+        },
+    )
+    exfil_record = manager.get_trust_record("exfil_entity")
+
+    assert scan_record is not None
+    assert exfil_record is not None
+    assert scan_record["last_incident_type"] == "distributed_scan"
+    assert exfil_record["last_incident_type"] == "data_exfiltration"
+    assert exfil_record["last_incident_severity"] == "critical"
+    assert exfil_record["trust_score"] < scan_record["trust_score"]

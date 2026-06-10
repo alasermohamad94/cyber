@@ -20,6 +20,13 @@ RISK_SEVERITY_BONUS = {
     "critical": 24.0,
 }
 
+SEVERITY_DECAY_FACTORS = {
+    "low": 0.6,
+    "medium": 1.0,
+    "high": 1.4,
+    "critical": 1.8,
+}
+
 ASSET_CRITICALITY_FACTORS = {
     "employee_device": 1.0,
     "web_server": 2.0,
@@ -44,6 +51,32 @@ ASSET_TYPE_ALIASES = {
     "database_server": "database_server",
     "db": "database_server",
     "db_server": "database_server",
+}
+
+INCIDENT_TYPE_DECAY_FACTORS = {
+    "behavior_anomaly": 1.0,
+    "distributed_scan": 1.1,
+    "targeted_brute_force": 1.3,
+    "credential_abuse": 1.4,
+    "lateral_movement": 1.5,
+    "malware_activity": 1.6,
+    "data_exfiltration": 1.8,
+}
+
+INCIDENT_TYPE_ALIASES = {
+    "anomaly": "behavior_anomaly",
+    "behavior_anomaly": "behavior_anomaly",
+    "brute_force": "targeted_brute_force",
+    "credential_abuse": "credential_abuse",
+    "data_exfiltration": "data_exfiltration",
+    "distributed_scan": "distributed_scan",
+    "exfiltration": "data_exfiltration",
+    "lateral_movement": "lateral_movement",
+    "malware": "malware_activity",
+    "malware_activity": "malware_activity",
+    "port_scan": "distributed_scan",
+    "scan": "distributed_scan",
+    "targeted_brute_force": "targeted_brute_force",
 }
 
 
@@ -72,6 +105,10 @@ class TrustRecord:
         Asset type used in risk scoring
     asset_criticality:
         Asset criticality factor applied to the base risk
+    last_incident_type:
+        Last incident type that affected trust decay
+    last_incident_severity:
+        Last severity used in rule-based trust decay
     """
 
     entity_id: str
@@ -83,6 +120,8 @@ class TrustRecord:
     risk_score: float = 0.0
     asset_type: str = "employee_device"
     asset_criticality: float = 1.0
+    last_incident_type: str = "behavior_anomaly"
+    last_incident_severity: str = "low"
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary format."""
@@ -96,6 +135,8 @@ class TrustRecord:
             "risk_score": self.risk_score,
             "asset_type": self.asset_type,
             "asset_criticality": self.asset_criticality,
+            "last_incident_type": self.last_incident_type,
+            "last_incident_severity": self.last_incident_severity,
         }
 
 
@@ -115,7 +156,6 @@ class TrustManager:
         self._lock = threading.RLock()
         self._store = get_store()
         self.max_history_length = 20
-        self.decay_rate = 0.95
         self.positive_boost = 2.0
         self.negative_penalty = 5.0
         self._load_from_store()
@@ -132,6 +172,8 @@ class TrustManager:
                 risk_score=float(record.get("risk_score", 0.0)),
                 asset_type=record.get("asset_type", "employee_device"),
                 asset_criticality=float(record.get("asset_criticality", 1.0)),
+                last_incident_type=record.get("last_incident_type", "behavior_anomaly"),
+                last_incident_severity=record.get("last_incident_severity", "low"),
             )
 
     def _normalize_asset_type(self, asset_type: str) -> str:
@@ -180,6 +222,42 @@ class TrustManager:
 
         return asset_type, asset_factor
 
+    def _normalize_incident_type(self, incident_type: str) -> str:
+        """Normalize incoming incident labels into supported rule keys."""
+        key = (incident_type or "").strip().lower()
+        return INCIDENT_TYPE_ALIASES.get(key, "behavior_anomaly")
+
+    def _resolve_incident_profile(
+        self, entity_context: Optional[Mapping[str, Any]], behavior_score: float
+    ) -> Tuple[str, str]:
+        """
+        Resolve the incident type and severity used in trust decay.
+
+        تعليق: هذه الطبقة تجعل انخفاض الثقة مرتبطًا بالسياق الأمني الفعلي
+        بدل أن يكون مجرد انخفاض زمني عام.
+        """
+        incident_type = "behavior_anomaly"
+        incident_severity = self._severity_from_behavior_score(behavior_score)
+
+        if not entity_context:
+            return incident_type, incident_severity
+
+        for key in ("incident_type", "detection_type", "event_type"):
+            raw_value = entity_context.get(key)
+            if isinstance(raw_value, str) and raw_value.strip():
+                incident_type = self._normalize_incident_type(raw_value)
+                break
+
+        for key in ("incident_severity", "severity"):
+            raw_value = entity_context.get(key)
+            if isinstance(raw_value, str) and raw_value.strip():
+                candidate = raw_value.strip().lower()
+                if candidate in SEVERITY_DECAY_FACTORS:
+                    incident_severity = candidate
+                    break
+
+        return incident_type, incident_severity
+
     def _severity_from_behavior_score(self, behavior_score: float) -> str:
         """Map the behavior score to a coarse severity label."""
         if behavior_score < 25:
@@ -221,17 +299,6 @@ class TrustManager:
         if difference < -5:
             return "declining"
         return "stable"
-
-    def _apply_time_decay(self, trust_score: float, last_updated: float) -> float:
-        """Apply a mild time-based decay to the trust score."""
-        current_time = time.time()
-        days_since_update = (current_time - last_updated) / (24 * 3600)
-
-        if days_since_update < 1:
-            return trust_score
-
-        decayed_score = trust_score * (self.decay_rate ** days_since_update)
-        return max(0.0, min(100.0, decayed_score))
 
     def _calculate_history_pressure(self, behavior_history: List[float]) -> float:
         """
@@ -278,13 +345,17 @@ class TrustManager:
         return max(0.0, min(100.0, risk_score))
 
     def _calculate_trust_adjustment(
-        self, risk_score: float, current_trust: float
+        self,
+        risk_score: float,
+        current_trust: float,
+        incident_type: str,
+        incident_severity: str,
     ) -> float:
         """
         Adjust trust according to the current risk score.
 
-        This is intentionally simple in the first task; later tasks can inject
-        asset criticality and rule-based incident decay without changing callers.
+        تعليق: هنا ننفذ Rule-based Score Decay عبر مضاعفات مستقلة
+        لخطورة الحادث ونوعه، بحيث تصبح خسارة الثقة متناسبة مع طبيعة التهديد.
         """
         if risk_score < 20:
             adjustment = self.positive_boost
@@ -302,7 +373,13 @@ class TrustManager:
         else:
             trust_multiplier = 1.0 + ((100.0 - current_trust) / 100.0) * 0.5
 
-        return adjustment * trust_multiplier
+        final_adjustment = adjustment * trust_multiplier
+        if final_adjustment < 0:
+            incident_factor = INCIDENT_TYPE_DECAY_FACTORS.get(incident_type, 1.0)
+            severity_factor = SEVERITY_DECAY_FACTORS.get(incident_severity, 1.0)
+            final_adjustment *= incident_factor * severity_factor
+
+        return final_adjustment
 
     def update_trust_score(
         self,
@@ -329,6 +406,9 @@ class TrustManager:
         asset_type, asset_criticality = self._resolve_asset_profile(
             entity_id, asset_context
         )
+        incident_type, incident_severity = self._resolve_incident_profile(
+            asset_context, behavior_score
+        )
 
         if current_trust is None:
             if entity_id in self.trust_records:
@@ -337,10 +417,6 @@ class TrustManager:
                 current_trust = 100.0
 
         if entity_id in self.trust_records:
-            current_trust = self._apply_time_decay(
-                current_trust,
-                self.trust_records[entity_id].last_updated,
-            )
             behavior_history = self.trust_records[entity_id].behavior_history.copy()
         else:
             behavior_history = []
@@ -352,7 +428,12 @@ class TrustManager:
         risk_score = self._calculate_risk_score(
             behavior_score, behavior_history, asset_criticality
         )
-        adjustment = self._calculate_trust_adjustment(risk_score, current_trust)
+        adjustment = self._calculate_trust_adjustment(
+            risk_score,
+            current_trust,
+            incident_type,
+            incident_severity,
+        )
         new_trust = max(0.0, min(100.0, current_trust + adjustment))
 
         trust_trend = self._calculate_trust_trend(behavior_history)
@@ -368,6 +449,8 @@ class TrustManager:
             risk_score=risk_score,
             asset_type=asset_type,
             asset_criticality=asset_criticality,
+            last_incident_type=incident_type,
+            last_incident_severity=incident_severity,
         )
 
         self.trust_records[entity_id] = trust_record
@@ -412,6 +495,8 @@ class TrustManager:
                 risk_score=0.0,
                 asset_type=self.trust_records[entity_id].asset_type,
                 asset_criticality=self.trust_records[entity_id].asset_criticality,
+                last_incident_type="behavior_anomaly",
+                last_incident_severity="low",
             )
             self.trust_records[entity_id] = updated_record
             self._store.save_trust_record(updated_record.to_dict())
