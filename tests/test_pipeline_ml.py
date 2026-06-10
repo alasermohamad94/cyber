@@ -29,3 +29,24 @@ def test_analyze_entity_includes_ml_advisory():
     assert result["incident_type"] == "data_exfiltration"
     assert result["incident_severity"] == "critical"
     assert "ml_advisory" in result["decision"] or result["decision"].get("ml_advisory")
+
+
+def test_analyze_entity_exposes_targeted_brute_force_signal():
+    cds = CyberDefenseSystem()
+    result = cds.analyze_entity(
+        "test_targeted_bruteforce",
+        {
+            "connection_rate": 0.2,
+            "request_rate": 0.2,
+            "failed_auth_count": 18,
+            "total_auth_count": 20,
+            "failed_auth_window_seconds": 120,
+            "username": "admin",
+            "source_ips": ["10.0.0.10", "10.0.0.11", "10.0.0.12"],
+            "unique_target_users": 1,
+        },
+    )
+
+    features = result["behavior_profile"]["features"]
+    assert features["targeted_brute_force_signal"] >= 0.9
+    assert result["behavior_profile"]["anomaly_level"] in {"high", "critical"}
