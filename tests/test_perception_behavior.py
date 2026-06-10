@@ -144,3 +144,38 @@ def test_analyze_behavior_detects_distributed_port_scan():
     assert distributed_scan.anomaly_level in {"high", "critical"}
 
 
+def test_analyze_behavior_detects_exfiltration_above_baseline():
+    """Outbound data far above baseline should trigger a strong exfiltration signal."""
+    profile = analyze_behavior(
+        {
+            "connection_rate": 1.0,
+            "request_rate": 1.0,
+            "bytes_out": 500_000_000,
+            "baseline_bytes_out": 50_000_000,
+            "sensitive_access_count": 1.0,
+            "external_destination_ratio": 1.0,
+        }
+    )
+
+    assert profile.features is not None
+    assert profile.features["exfiltration_signal"] >= 0.95
+    assert profile.behavior_score >= 85.0
+    assert profile.anomaly_level == "critical"
+
+
+def test_analyze_behavior_reduces_exfiltration_signal_near_baseline():
+    """Outbound traffic close to baseline should not look like severe exfiltration."""
+    profile = analyze_behavior(
+        {
+            "bytes_out": 60_000_000,
+            "baseline_bytes_out": 50_000_000,
+            "sensitive_access_count": 0.2,
+            "external_destination_ratio": 0.1,
+        }
+    )
+
+    assert profile.features is not None
+    assert profile.features["exfiltration_signal"] < 0.2
+    assert profile.anomaly_level in {"low", "medium"}
+
+

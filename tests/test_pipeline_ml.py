@@ -71,3 +71,24 @@ def test_analyze_entity_exposes_distributed_scan_signal():
     features = result["behavior_profile"]["features"]
     assert features["distributed_scan_signal"] >= 0.9
     assert result["behavior_profile"]["anomaly_level"] in {"high", "critical"}
+
+
+def test_analyze_entity_exposes_exfiltration_signal():
+    cds = CyberDefenseSystem()
+    result = cds.analyze_entity(
+        "test_exfiltration",
+        {
+            "connection_rate": 1.0,
+            "request_rate": 1.0,
+            "bytes_out": 500_000_000,
+            "baseline_bytes_out": 50_000_000,
+            "sensitive_access_count": 1.0,
+            "external_destination_ratio": 1.0,
+            "incident_type": "data_exfiltration",
+            "incident_severity": "critical",
+        },
+    )
+
+    features = result["behavior_profile"]["features"]
+    assert features["exfiltration_signal"] >= 0.95
+    assert result["behavior_profile"]["anomaly_level"] == "critical"

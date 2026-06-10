@@ -171,6 +171,25 @@ def _resolve_unique_scan_targets(entity_data: Mapping[str, Any]) -> int:
     return 0
 
 
+def _resolve_volume_metric(
+    entity_data: Mapping[str, Any],
+    raw_keys: tuple[str, ...],
+    normalized_keys: tuple[str, ...],
+) -> tuple[float, bool]:
+    """Resolve a data-volume metric and tell whether it is raw bytes or normalized."""
+    for key in raw_keys:
+        value = _safe_get_number(entity_data, key, -1.0)
+        if value >= 0.0:
+            return max(0.0, value), True
+
+    for key in normalized_keys:
+        value = _safe_get_number(entity_data, key, -1.0)
+        if value >= 0.0:
+            return _clamp_unit(value), False
+
+    return 0.0, False
+
+
 def _compute_targeted_brute_force_signal(
     entity_data: Mapping[str, Any],
     failed_auth_count: float,
@@ -335,6 +354,83 @@ def _compute_distributed_scan_signal(
     return _clamp_unit(signal)
 
 
+def _compute_exfiltration_signal(
+    entity_data: Mapping[str, Any],
+    sensitive_resource_access: float,
+) -> float:
+    """
+    Estimate the likelihood of data exfiltration using outbound volume deviation.
+
+    The signal becomes stronger when:
+    - outbound traffic is far above the historical baseline
+    - the accessed data is sensitive
+    - transfers are directed to external destinations
+    """
+
+    explicit_signal = _safe_get_number(entity_data, "exfiltration_signal", -1.0)
+    if explicit_signal >= 0.0:
+        return _clamp_unit(explicit_signal)
+
+    current_volume, current_is_raw = _resolve_volume_metric(
+        entity_data,
+        raw_keys=("bytes_out", "outbound_bytes", "egress_bytes"),
+        normalized_keys=("outbound_data_volume", "egress_volume", "bytes_out_normalized"),
+    )
+    baseline_volume, baseline_is_raw = _resolve_volume_metric(
+        entity_data,
+        raw_keys=("baseline_bytes_out", "baseline_outbound_bytes", "baseline_egress_bytes"),
+        normalized_keys=(
+            "baseline_outbound_data_volume",
+            "baseline_egress_volume",
+            "baseline_bytes_out_normalized",
+        ),
+    )
+
+    explicit_ratio = _safe_get_number(entity_data, "outbound_volume_ratio", -1.0)
+    if explicit_ratio < 0.0:
+        explicit_ratio = _safe_get_number(entity_data, "egress_to_baseline_ratio", -1.0)
+
+    baseline_deviation_factor = 0.0
+    if explicit_ratio >= 0.0:
+        baseline_deviation_factor = _clamp_unit((explicit_ratio - 1.0) / 4.0)
+    elif (
+        current_volume > 0.0
+        and baseline_volume > 0.0
+        and current_is_raw == baseline_is_raw
+    ):
+        baseline_ratio = current_volume / max(baseline_volume, 1e-9)
+        baseline_deviation_factor = _clamp_unit((baseline_ratio - 1.0) / 4.0)
+
+    if current_is_raw:
+        outbound_volume_factor = baseline_deviation_factor
+    else:
+        outbound_volume_factor = current_volume
+
+    external_destination_factor = _clamp_unit(
+        _safe_get_number(
+            entity_data,
+            "external_destination_ratio",
+            _safe_get_number(entity_data, "external_transfer_ratio", 0.0),
+        )
+    )
+
+    # نعتمد أولاً على الانحراف عن السلوك الطبيعي، ثم نعزز الإشارة بسياق الحساسية والوجهة.
+    if baseline_deviation_factor > 0.0:
+        signal = (
+            0.70 * baseline_deviation_factor
+            + 0.20 * sensitive_resource_access
+            + 0.10 * external_destination_factor
+        )
+    else:
+        signal = (
+            0.60 * outbound_volume_factor
+            + 0.25 * sensitive_resource_access
+            + 0.15 * external_destination_factor
+        )
+
+    return _clamp_unit(signal)
+
+
 def _compute_behavior_score(features: Mapping[str, float]) -> float:
     """
     Compute an aggregated behavior score from normalized features.
@@ -359,6 +455,7 @@ def _compute_behavior_score(features: Mapping[str, float]) -> float:
     base += 20.0 * min(1.0, features.get("unique_ports_contacted", 0.0))
     base += 25.0 * min(1.0, features.get("distributed_scan_signal", 0.0))
     base += 10.0 * min(1.0, features.get("sensitive_resource_access", 0.0))
+    base += 40.0 * min(1.0, features.get("exfiltration_signal", 0.0))
 
     # Clamp to [0, 100]
     return max(0.0, min(100.0, base))
@@ -399,6 +496,10 @@ def analyze_behavior(entity_data: Mapping[str, Any]) -> BehaviorProfile:
         - failed_auth_window_seconds: time window used for failed login aggregation
         - target_host / target_hosts / unique_scan_targets: scan destination scope
         - scan_window_seconds: time window used for scan aggregation
+        - bytes_out / outbound_bytes: outbound data volume for the current window
+        - baseline_bytes_out / baseline_outbound_bytes: normal outbound baseline
+        - outbound_volume_ratio: explicit ratio between current outbound traffic and baseline
+        - external_destination_ratio: normalized ratio of transfers to external destinations
 
     Returns
     -------
@@ -439,6 +540,10 @@ def analyze_behavior(entity_data: Mapping[str, Any]) -> BehaviorProfile:
     sensitive_resource_access = max(
         0.0, _safe_get_number(entity_data, "sensitive_access_count")
     )
+    exfiltration_signal = _compute_exfiltration_signal(
+        entity_data,
+        sensitive_resource_access,
+    )
 
     features: Dict[str, float] = {
         "connection_rate": connection_rate,
@@ -448,6 +553,7 @@ def analyze_behavior(entity_data: Mapping[str, Any]) -> BehaviorProfile:
         "unique_ports_contacted": unique_ports_contacted,
         "distributed_scan_signal": distributed_scan_signal,
         "sensitive_resource_access": sensitive_resource_access,
+        "exfiltration_signal": exfiltration_signal,
     }
 
     behavior_score = _compute_behavior_score(features)
