@@ -1,12 +1,13 @@
 """Integration tests for auth, persistence, roles, and IP policy store."""
 
+import importlib
 import os
 import tempfile
 import time
 
 import pytest
 
-from storage.persistence import SecurityStore
+from storage.persistence import SecurityStore, reset_store, get_store
 from security.auth import verify_credentials
 from security.firewall import validate_ip
 from security.config import get_user_directory
@@ -114,3 +115,58 @@ def test_ml_shadow_predict():
     })
     assert result["enabled"] is True
     assert "advisory_score" in result
+
+
+def test_web_monitor_records_correlated_incident_event():
+    pytest.importorskip("psutil")
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    os.environ.pop("CDS_DATABASE_URL", None)
+    os.environ["CDS_DB_PATH"] = path
+    reset_store()
+
+    import backend.services.monitor as monitor_module
+
+    monitor_module = importlib.reload(monitor_module)
+    web_monitor = monitor_module.monitor
+
+    try:
+        web_monitor.analyze_entity(
+            "scan_entity",
+            {
+                "source_ip": "198.51.100.55",
+                "connection_rate": 0.85,
+                "request_rate": 0.4,
+                "unique_ports": 0.95,
+                "unique_source_ips": 5,
+                "target_host": "db-core-01",
+                "scan_window_seconds": 120,
+            },
+        )
+        web_monitor.analyze_entity(
+            "auth_entity",
+            {
+                "source_ip": "198.51.100.55",
+                "connection_rate": 0.2,
+                "request_rate": 0.2,
+                "failed_auth_count": 18,
+                "total_auth_count": 20,
+                "failed_auth_window_seconds": 120,
+                "username": "admin",
+                "unique_target_users": 1,
+            },
+        )
+
+        events = get_store().list_security_events(10)
+
+        assert any(
+            event["event_type"] == "recon_to_initial_access" for event in events
+        )
+    finally:
+        web_monitor.cpu_sampler._running = False
+        reset_store()
+        os.environ.pop("CDS_DB_PATH", None)
+        try:
+            os.remove(path)
+        except OSError:
+            pass

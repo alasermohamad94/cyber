@@ -14,6 +14,7 @@ from dataclasses import asdict
 # Import the working modules
 from perception.behavior_analysis import analyze_behavior, BehaviorProfile
 from prediction.attack_prediction import predict_attack, AttackPrediction
+from correlation.threat_correlation import ThreatCorrelationEngine
 
 # Import empty modules (we'll implement basic functionality)
 from decision_engine.descision_engine import make_decision
@@ -30,6 +31,7 @@ class CyberDefenseSystem:
     def __init__(self):
         self.entity_trust_scores: Dict[str, float] = {}
         self.active_responses: List[Dict[str, Any]] = []
+        self.correlation_engine = ThreatCorrelationEngine()
         
     def analyze_entity(self, entity_id: str, entity_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -67,6 +69,19 @@ class CyberDefenseSystem:
         if ml_advisory.get("enabled"):
             print(f"[ML Shadow] {ml_advisory.get('anomaly_label')} "
                   f"advisory={ml_advisory.get('advisory_score'):.1f}")
+
+        # Step 2c: Threat correlation - link related events into one incident.
+        correlation = self.correlation_engine.analyze(
+            entity_id,
+            entity_data,
+            behavior_profile,
+        )
+        if correlation.correlated:
+            print("[Correlation] Multi-stage incident linked automatically")
+            print(f"   Incident Type: {correlation.incident_type}")
+            print(f"   Source IP: {correlation.source_ip}")
+        else:
+            print("[Correlation] No related incident found in active window")
         
         # Step 3: Trust System - Update trust score
         print("[Trust System] Updating trust score...")
@@ -120,6 +135,7 @@ class CyberDefenseSystem:
             'asset_criticality': trust_record.get('asset_criticality', 1.0),
             'incident_type': trust_record.get('last_incident_type', 'behavior_anomaly'),
             'incident_severity': trust_record.get('last_incident_severity', 'low'),
+            'correlation': asdict(correlation),
             'decision': decision,
             'ml_advisory': ml_advisory,
             'response': response_result,

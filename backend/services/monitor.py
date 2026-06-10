@@ -199,6 +199,19 @@ class WebServerMonitor:
                 ),
                 action_taken=result["decision"]["action"],
             )
+            correlation = result.get("correlation", {})
+            if correlation.get("correlated"):
+                self.add_security_event(
+                    event_type=correlation.get("incident_type", "correlated_incident"),
+                    severity=correlation.get("severity", result["decision"]["severity"]),
+                    source_ip=correlation.get("source_ip", entity_data.get("source_ip", "")),
+                    target_entity=entity_id,
+                    description=correlation.get(
+                        "reasoning",
+                        "Correlated multi-stage incident detected automatically.",
+                    ),
+                    action_taken=result["decision"]["action"],
+                )
             return result
         except Exception as exc:
             return {"error": str(exc), "entity_id": entity_id, "timestamp": time.time()}
