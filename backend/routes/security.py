@@ -1,7 +1,7 @@
 import time
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from backend.services.monitor import monitor, serialize_events
@@ -92,7 +92,8 @@ async def analyze_entity(
 @router.post("/api/block-ip")
 async def block_ip(
     body: IpActionBody,
-    _role: str = Depends(require_permission_dep("ip:block")),
+    request: Request,
+    role: str = Depends(require_permission_dep("ip:block")),
 ):
     if not validate_ip(body.ip_address):
         raise HTTPException(status_code=400, detail="Invalid IP address format")
@@ -106,6 +107,11 @@ async def block_ip(
         description=f"IP {body.ip_address} blocked ({body.reason})",
         action_taken="blocked" if applied else "policy_recorded",
     )
+    get_store().append_audit_log(
+        actor=request.session.get("username", role),
+        action="ip_blocked",
+        details={"ip_address": body.ip_address, "reason": body.reason, "firewall_applied": applied},
+    )
     return {
         "success": True,
         "firewall_applied": applied,
@@ -117,7 +123,8 @@ async def block_ip(
 @router.post("/api/unblock-ip")
 async def unblock_ip(
     body: IpActionBody,
-    _role: str = Depends(require_permission_dep("ip:unblock")),
+    request: Request,
+    role: str = Depends(require_permission_dep("ip:unblock")),
 ):
     if not validate_ip(body.ip_address):
         raise HTTPException(status_code=400, detail="Invalid IP address format")
@@ -132,6 +139,11 @@ async def unblock_ip(
         target_entity="firewall",
         description=f"IP {body.ip_address} unblocked",
         action_taken="unblocked",
+    )
+    get_store().append_audit_log(
+        actor=request.session.get("username", role),
+        action="ip_unblocked",
+        details={"ip_address": body.ip_address},
     )
     return {"success": True, "message": fw_message}
 

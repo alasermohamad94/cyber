@@ -21,6 +21,12 @@ PERMISSIONS: Dict[str, Set[Role]] = {
     "ip:unblock": {Role.ADMIN},
     "report:generate": {Role.ADMIN, Role.ANALYST},
     "settings:write": {Role.ADMIN},
+    "incidents:read": {Role.ADMIN, Role.ANALYST, Role.VIEWER},
+    "incidents:write": {Role.ADMIN, Role.ANALYST},
+    "cases:read": {Role.ADMIN, Role.ANALYST, Role.VIEWER},
+    "cases:write": {Role.ADMIN, Role.ANALYST},
+    "audit:verify": {Role.ADMIN, Role.ANALYST},
+    "forensics:read": {Role.ADMIN, Role.ANALYST},
 }
 
 

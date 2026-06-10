@@ -15,7 +15,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from backend.routes import auth, metrics, security  # noqa: E402
+from backend.routes import auth, forensics, incidents, metrics, security  # noqa: E402
 from backend.services.monitor import format_duration, monitor  # noqa: E402
 from security.config import get_bind_host, get_bind_port, get_cors_origins, get_secret_key  # noqa: E402
 from security.fastapi_auth import is_authenticated  # noqa: E402
@@ -44,6 +44,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(metrics.router)
 app.include_router(security.router)
+app.include_router(incidents.router)
+app.include_router(forensics.router)
 
 
 @app.get("/api/health")
