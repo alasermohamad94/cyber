@@ -49,7 +49,9 @@ class PostgresSecurityStore:
                             behavior_history TEXT,
                             trust_trend TEXT,
                             risk_level TEXT,
-                            risk_score DOUBLE PRECISION DEFAULT 0
+                            risk_score DOUBLE PRECISION DEFAULT 0,
+                            asset_type TEXT DEFAULT 'employee_device',
+                            asset_criticality DOUBLE PRECISION DEFAULT 1
                         );
                         CREATE TABLE IF NOT EXISTS response_actions (
                             action_id TEXT PRIMARY KEY,
@@ -75,6 +77,18 @@ class PostgresSecurityStore:
                         """
                         ALTER TABLE trust_records
                         ADD COLUMN IF NOT EXISTS risk_score DOUBLE PRECISION DEFAULT 0
+                        """
+                    )
+                    cur.execute(
+                        """
+                        ALTER TABLE trust_records
+                        ADD COLUMN IF NOT EXISTS asset_type TEXT DEFAULT 'employee_device'
+                        """
+                    )
+                    cur.execute(
+                        """
+                        ALTER TABLE trust_records
+                        ADD COLUMN IF NOT EXISTS asset_criticality DOUBLE PRECISION DEFAULT 1
                         """
                     )
                 conn.commit()
@@ -165,15 +179,17 @@ class PostgresSecurityStore:
                         """
                         INSERT INTO trust_records
                         (entity_id, trust_score, last_updated, behavior_history,
-                         trust_trend, risk_level, risk_score)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                         trust_trend, risk_level, risk_score, asset_type, asset_criticality)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         ON CONFLICT (entity_id) DO UPDATE SET
                             trust_score = EXCLUDED.trust_score,
                             last_updated = EXCLUDED.last_updated,
                             behavior_history = EXCLUDED.behavior_history,
                             trust_trend = EXCLUDED.trust_trend,
                             risk_level = EXCLUDED.risk_level,
-                            risk_score = EXCLUDED.risk_score
+                            risk_score = EXCLUDED.risk_score,
+                            asset_type = EXCLUDED.asset_type,
+                            asset_criticality = EXCLUDED.asset_criticality
                         """,
                         (
                             record["entity_id"],
@@ -183,6 +199,8 @@ class PostgresSecurityStore:
                             record.get("trust_trend", "stable"),
                             record.get("risk_level", "low"),
                             record.get("risk_score", 0.0),
+                            record.get("asset_type", "employee_device"),
+                            record.get("asset_criticality", 1.0),
                         ),
                     )
                 conn.commit()

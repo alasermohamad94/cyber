@@ -69,3 +69,28 @@ def test_trust_statistics_include_average_risk_score(trust_module):
     assert stats["average_risk_score"] > 0.0
     assert stats["risk_distribution"]["low"] >= 1
     assert stats["risk_distribution"]["high"] + stats["risk_distribution"]["critical"] >= 1
+
+
+def test_database_assets_receive_higher_risk_for_same_behavior(trust_module):
+    manager = trust_module.TrustManager()
+
+    manager.update_trust_score(
+        "user_workstation_01",
+        35.0,
+        asset_context={"asset_type": "employee_device"},
+    )
+    workstation = manager.get_trust_record("user_workstation_01")
+
+    manager.update_trust_score(
+        "db_server_01",
+        35.0,
+        asset_context={"asset_type": "database_server"},
+    )
+    database = manager.get_trust_record("db_server_01")
+
+    assert workstation is not None
+    assert database is not None
+    assert workstation["asset_criticality"] == 1.0
+    assert database["asset_criticality"] == 5.0
+    assert database["risk_score"] > workstation["risk_score"]
+    assert database["risk_level"] in {"high", "critical"}

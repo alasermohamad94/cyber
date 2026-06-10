@@ -8,7 +8,7 @@ defense system.
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from storage.persistence import get_store
 
@@ -18,6 +18,32 @@ RISK_SEVERITY_BONUS = {
     "medium": 7.0,
     "high": 15.0,
     "critical": 24.0,
+}
+
+ASSET_CRITICALITY_FACTORS = {
+    "employee_device": 1.0,
+    "web_server": 2.0,
+    "database_server": 5.0,
+}
+
+ASSET_TYPE_ALIASES = {
+    "employee": "employee_device",
+    "employee_device": "employee_device",
+    "endpoint": "employee_device",
+    "generic": "employee_device",
+    "user_device": "employee_device",
+    "user_workstation": "employee_device",
+    "workstation": "employee_device",
+    "app_server": "web_server",
+    "application_server": "web_server",
+    "server_web": "web_server",
+    "web": "web_server",
+    "web_server": "web_server",
+    "control_server": "database_server",
+    "database": "database_server",
+    "database_server": "database_server",
+    "db": "database_server",
+    "db_server": "database_server",
 }
 
 
@@ -42,6 +68,10 @@ class TrustRecord:
         Current risk level based on the computed risk score
     risk_score:
         Current risk score [0, 100]
+    asset_type:
+        Asset type used in risk scoring
+    asset_criticality:
+        Asset criticality factor applied to the base risk
     """
 
     entity_id: str
@@ -51,6 +81,8 @@ class TrustRecord:
     trust_trend: str
     risk_level: str
     risk_score: float = 0.0
+    asset_type: str = "employee_device"
+    asset_criticality: float = 1.0
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary format."""
@@ -62,6 +94,8 @@ class TrustRecord:
             "trust_trend": self.trust_trend,
             "risk_level": self.risk_level,
             "risk_score": self.risk_score,
+            "asset_type": self.asset_type,
+            "asset_criticality": self.asset_criticality,
         }
 
 
@@ -96,7 +130,55 @@ class TrustManager:
                 trust_trend=record.get("trust_trend", "stable"),
                 risk_level=record.get("risk_level", "low"),
                 risk_score=float(record.get("risk_score", 0.0)),
+                asset_type=record.get("asset_type", "employee_device"),
+                asset_criticality=float(record.get("asset_criticality", 1.0)),
             )
+
+    def _normalize_asset_type(self, asset_type: str) -> str:
+        """Normalize incoming asset labels into the supported canonical types."""
+        key = (asset_type or "").strip().lower()
+        return ASSET_TYPE_ALIASES.get(key, "employee_device")
+
+    def _infer_asset_type(
+        self, entity_id: str, asset_context: Optional[Mapping[str, Any]]
+    ) -> str:
+        """Infer the asset type from explicit metadata first, then from the entity id."""
+        if asset_context:
+            for key in ("asset_type", "entity_type", "asset_category"):
+                raw_value = asset_context.get(key)
+                if isinstance(raw_value, str) and raw_value.strip():
+                    return self._normalize_asset_type(raw_value)
+
+        entity_key = entity_id.lower()
+        if "db" in entity_key or "database" in entity_key:
+            return "database_server"
+        if "web" in entity_key or "server" in entity_key:
+            return "web_server"
+        return "employee_device"
+
+    def _resolve_asset_profile(
+        self, entity_id: str, asset_context: Optional[Mapping[str, Any]]
+    ) -> Tuple[str, float]:
+        """
+        Resolve the asset type and criticality factor used in the risk engine.
+
+        تعليق: نسمح بتمرير عامل مباشر عند الحاجة، لكن المسار الطبيعي يعتمد
+        على نوع الأصل المعياري حتى يبقى السلوك قابلاً للتوقع والاختبار.
+        """
+        asset_type = self._infer_asset_type(entity_id, asset_context)
+        asset_factor = ASSET_CRITICALITY_FACTORS.get(asset_type, 1.0)
+
+        if asset_context:
+            for key in ("asset_criticality", "criticality_factor"):
+                raw_value = asset_context.get(key)
+                try:
+                    if raw_value is not None:
+                        asset_factor = max(0.1, float(raw_value))
+                        break
+                except (TypeError, ValueError):
+                    continue
+
+        return asset_type, asset_factor
 
     def _severity_from_behavior_score(self, behavior_score: float) -> str:
         """Map the behavior score to a coarse severity label."""
@@ -173,7 +255,10 @@ class TrustManager:
         return min(15.0, pressure)
 
     def _calculate_risk_score(
-        self, behavior_score: float, behavior_history: List[float]
+        self,
+        behavior_score: float,
+        behavior_history: List[float],
+        asset_criticality: float,
     ) -> float:
         """
         Build a normalized risk score [0, 100].
@@ -187,7 +272,9 @@ class TrustManager:
         severity_bonus = RISK_SEVERITY_BONUS[severity]
         history_pressure = self._calculate_history_pressure(behavior_history)
 
-        risk_score = behavior_score * 0.7 + severity_bonus + history_pressure
+        # تعليق: هذه هي الدرجة الأساسية قبل أخذ حساسية الأصل بالحسبان.
+        base_risk = behavior_score * 0.7 + severity_bonus + history_pressure
+        risk_score = base_risk * asset_criticality
         return max(0.0, min(100.0, risk_score))
 
     def _calculate_trust_adjustment(
@@ -222,11 +309,12 @@ class TrustManager:
         entity_id: str,
         behavior_score: float,
         current_trust: Optional[float] = None,
+        asset_context: Optional[Mapping[str, Any]] = None,
     ) -> float:
         """Update trust score for an entity based on the computed risk."""
         with self._lock:
             return self._update_trust_score_locked(
-                entity_id, behavior_score, current_trust
+                entity_id, behavior_score, current_trust, asset_context
             )
 
     def _update_trust_score_locked(
@@ -234,9 +322,13 @@ class TrustManager:
         entity_id: str,
         behavior_score: float,
         current_trust: Optional[float] = None,
+        asset_context: Optional[Mapping[str, Any]] = None,
     ) -> float:
         current_time = time.time()
         behavior_score = max(0.0, min(100.0, float(behavior_score)))
+        asset_type, asset_criticality = self._resolve_asset_profile(
+            entity_id, asset_context
+        )
 
         if current_trust is None:
             if entity_id in self.trust_records:
@@ -257,7 +349,9 @@ class TrustManager:
         if len(behavior_history) > self.max_history_length:
             behavior_history = behavior_history[-self.max_history_length:]
 
-        risk_score = self._calculate_risk_score(behavior_score, behavior_history)
+        risk_score = self._calculate_risk_score(
+            behavior_score, behavior_history, asset_criticality
+        )
         adjustment = self._calculate_trust_adjustment(risk_score, current_trust)
         new_trust = max(0.0, min(100.0, current_trust + adjustment))
 
@@ -272,6 +366,8 @@ class TrustManager:
             trust_trend=trust_trend,
             risk_level=risk_level,
             risk_score=risk_score,
+            asset_type=asset_type,
+            asset_criticality=asset_criticality,
         )
 
         self.trust_records[entity_id] = trust_record
@@ -314,6 +410,8 @@ class TrustManager:
                 trust_trend="stable",
                 risk_level="low",
                 risk_score=0.0,
+                asset_type=self.trust_records[entity_id].asset_type,
+                asset_criticality=self.trust_records[entity_id].asset_criticality,
             )
             self.trust_records[entity_id] = updated_record
             self._store.save_trust_record(updated_record.to_dict())
@@ -366,6 +464,7 @@ def update_trust_score(
     entity_id: str,
     behavior_score: float,
     current_trust: Optional[float] = None,
+    asset_context: Optional[Mapping[str, Any]] = None,
 ) -> float:
     """
     Update trust score for an entity.
@@ -376,11 +475,14 @@ def update_trust_score(
         entity_id: Entity identifier
         behavior_score: Current behavior score [0, 100]
         current_trust: Current trust score (optional)
+        asset_context: Optional asset metadata used in risk scoring
         
     Returns:
         Updated trust score
     """
-    return _trust_manager.update_trust_score(entity_id, behavior_score, current_trust)
+    return _trust_manager.update_trust_score(
+        entity_id, behavior_score, current_trust, asset_context
+    )
 
 
 def get_trust_record(entity_id: str) -> Optional[Dict[str, Any]]:

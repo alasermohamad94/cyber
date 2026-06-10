@@ -71,11 +71,18 @@ class CyberDefenseSystem:
         # Step 3: Trust System - Update trust score
         print("[Trust System] Updating trust score...")
         current_trust = self.entity_trust_scores.get(entity_id, 100.0)
-        new_trust = update_trust_score(entity_id, behavior_profile.behavior_score, current_trust)
+        new_trust = update_trust_score(
+            entity_id,
+            behavior_profile.behavior_score,
+            current_trust,
+            entity_data,
+        )
         self.entity_trust_scores[entity_id] = new_trust
         trust_record = get_trust_record(entity_id) or {}
         print(f"   Trust Score: {new_trust:.1f}")
         print(f"   Risk Score: {trust_record.get('risk_score', 0.0):.1f}")
+        print(f"   Asset Type: {trust_record.get('asset_type', 'employee_device')}")
+        print(f"   Asset Criticality: {trust_record.get('asset_criticality', 1.0):.1f}")
         
         # Step 4: Decision Engine - Make security decision
         print("[Decision Engine] Making security decision...")
@@ -107,6 +114,8 @@ class CyberDefenseSystem:
             'trust_score': new_trust,
             'risk_score': trust_record.get('risk_score', 0.0),
             'risk_level': trust_record.get('risk_level', 'low'),
+            'asset_type': trust_record.get('asset_type', 'employee_device'),
+            'asset_criticality': trust_record.get('asset_criticality', 1.0),
             'decision': decision,
             'ml_advisory': ml_advisory,
             'response': response_result,

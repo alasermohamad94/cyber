@@ -54,7 +54,9 @@ class SecurityStore:
                         behavior_history TEXT,
                         trust_trend TEXT,
                         risk_level TEXT,
-                        risk_score REAL DEFAULT 0
+                        risk_score REAL DEFAULT 0,
+                        asset_type TEXT DEFAULT 'employee_device',
+                        asset_criticality REAL DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS response_actions (
                         action_id TEXT PRIMARY KEY,
@@ -77,6 +79,12 @@ class SecurityStore:
                     """
                 )
                 self._ensure_column_exists(conn, "trust_records", "risk_score", "REAL DEFAULT 0")
+                self._ensure_column_exists(
+                    conn, "trust_records", "asset_type", "TEXT DEFAULT 'employee_device'"
+                )
+                self._ensure_column_exists(
+                    conn, "trust_records", "asset_criticality", "REAL DEFAULT 1"
+                )
                 conn.commit()
             finally:
                 conn.close()
@@ -164,8 +172,8 @@ class SecurityStore:
                     """
                     INSERT OR REPLACE INTO trust_records
                     (entity_id, trust_score, last_updated, behavior_history,
-                     trust_trend, risk_level, risk_score)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                     trust_trend, risk_level, risk_score, asset_type, asset_criticality)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         record["entity_id"],
@@ -175,6 +183,8 @@ class SecurityStore:
                         record.get("trust_trend", "stable"),
                         record.get("risk_level", "low"),
                         record.get("risk_score", 0.0),
+                        record.get("asset_type", "employee_device"),
+                        record.get("asset_criticality", 1.0),
                     ),
                 )
                 conn.commit()
