@@ -113,3 +113,34 @@ def test_analyze_behavior_reduces_signal_for_password_spray():
     assert profile.anomaly_level in {"medium", "high"}
 
 
+def test_analyze_behavior_detects_distributed_port_scan():
+    """Scanning many ports from several IPs should be stronger than single-source probing."""
+    distributed_scan = analyze_behavior(
+        {
+            "connection_rate": 0.85,
+            "request_rate": 0.4,
+            "unique_ports": 0.95,
+            "unique_source_ips": 5,
+            "target_host": "db-core-01",
+            "scan_window_seconds": 120,
+        }
+    )
+    single_source_scan = analyze_behavior(
+        {
+            "connection_rate": 0.85,
+            "request_rate": 0.4,
+            "unique_ports": 0.95,
+            "source_ip": "10.0.0.5",
+            "target_host": "db-core-01",
+            "scan_window_seconds": 120,
+        }
+    )
+
+    assert distributed_scan.features is not None
+    assert single_source_scan.features is not None
+    assert distributed_scan.features["distributed_scan_signal"] >= 0.9
+    assert single_source_scan.features["distributed_scan_signal"] < 0.5
+    assert distributed_scan.behavior_score > single_source_scan.behavior_score
+    assert distributed_scan.anomaly_level in {"high", "critical"}
+
+

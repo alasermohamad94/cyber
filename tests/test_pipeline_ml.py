@@ -50,3 +50,24 @@ def test_analyze_entity_exposes_targeted_brute_force_signal():
     features = result["behavior_profile"]["features"]
     assert features["targeted_brute_force_signal"] >= 0.9
     assert result["behavior_profile"]["anomaly_level"] in {"high", "critical"}
+
+
+def test_analyze_entity_exposes_distributed_scan_signal():
+    cds = CyberDefenseSystem()
+    result = cds.analyze_entity(
+        "test_distributed_scan",
+        {
+            "connection_rate": 0.85,
+            "request_rate": 0.4,
+            "unique_ports": 0.95,
+            "unique_source_ips": 5,
+            "target_host": "db-core-01",
+            "scan_window_seconds": 120,
+            "incident_type": "distributed_scan",
+            "incident_severity": "high",
+        },
+    )
+
+    features = result["behavior_profile"]["features"]
+    assert features["distributed_scan_signal"] >= 0.9
+    assert result["behavior_profile"]["anomaly_level"] in {"high", "critical"}

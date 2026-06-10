@@ -126,6 +126,51 @@ def _resolve_unique_target_users(entity_data: Mapping[str, Any]) -> int:
     return 0
 
 
+def _normalize_unique_port_signal(raw_value: float) -> float:
+    """Normalize unique port counts whether they arrive as a ratio or raw count."""
+    if raw_value <= 1.0:
+        return _clamp_unit(raw_value)
+    return _clamp_unit(raw_value / 25.0)
+
+
+def _resolve_unique_ports_contacted(entity_data: Mapping[str, Any]) -> float:
+    """Resolve the normalized diversity of destination ports being contacted."""
+    unique_ports = _safe_get_number(entity_data, "unique_ports", -1.0)
+    if unique_ports >= 0.0:
+        return _normalize_unique_port_signal(unique_ports)
+
+    unique_port_count = _safe_get_number(entity_data, "unique_port_count", -1.0)
+    if unique_port_count >= 0.0:
+        return _normalize_unique_port_signal(unique_port_count)
+
+    port_list_count = _count_distinct_values(entity_data.get("target_ports"))
+    if port_list_count > 0:
+        return _normalize_unique_port_signal(float(port_list_count))
+
+    port_list_count = _count_distinct_values(entity_data.get("destination_ports"))
+    if port_list_count > 0:
+        return _normalize_unique_port_signal(float(port_list_count))
+
+    return 0.0
+
+
+def _resolve_unique_scan_targets(entity_data: Mapping[str, Any]) -> int:
+    """Resolve how many target hosts are involved in the scan window."""
+    unique_targets = _safe_get_number(entity_data, "unique_scan_targets", -1.0)
+    if unique_targets >= 0.0:
+        return max(0, int(unique_targets))
+
+    targets_count = _count_distinct_values(entity_data.get("target_hosts"))
+    if targets_count > 0:
+        return targets_count
+
+    for key in ("target_host", "target_asset_id", "destination_host"):
+        if _safe_get_text(entity_data, key):
+            return 1
+
+    return 0
+
+
 def _compute_targeted_brute_force_signal(
     entity_data: Mapping[str, Any],
     failed_auth_count: float,
@@ -206,6 +251,90 @@ def _compute_targeted_brute_force_signal(
     return _clamp_unit(signal)
 
 
+def _compute_distributed_scan_signal(
+    entity_data: Mapping[str, Any],
+    connection_rate: float,
+    request_rate: float,
+    unique_ports_contacted: float,
+) -> float:
+    """
+    Estimate whether port scanning is distributed across multiple source IPs.
+
+    The signal grows when:
+    - many distinct ports are touched
+    - the activity is spread across multiple source IPs
+    - the probing happens quickly in a short window
+    - the scan converges on one or few target hosts
+    """
+
+    explicit_signal = _safe_get_number(entity_data, "distributed_scan_signal", -1.0)
+    if explicit_signal >= 0.0:
+        return _clamp_unit(explicit_signal)
+
+    if unique_ports_contacted <= 0.0:
+        return 0.0
+
+    unique_source_ips = _resolve_unique_source_ips(entity_data)
+    unique_scan_targets = _resolve_unique_scan_targets(entity_data)
+    scan_window_seconds = max(
+        1.0,
+        _safe_get_number(
+            entity_data,
+            "scan_window_seconds",
+            _safe_get_number(entity_data, "connection_window_seconds", 300.0),
+        ),
+    )
+
+    raw_unique_port_count = _safe_get_number(entity_data, "unique_port_count", -1.0)
+    if raw_unique_port_count < 0.0:
+        raw_unique_port_count = float(
+            _count_distinct_values(entity_data.get("target_ports"))
+            or _count_distinct_values(entity_data.get("destination_ports"))
+        )
+    if raw_unique_port_count <= 0.0:
+        raw_unique_port_count = unique_ports_contacted * 25.0
+
+    ports_per_minute = raw_unique_port_count / max(1.0, scan_window_seconds / 60.0)
+    traffic_speed_factor = _clamp_unit(
+        max(connection_rate, request_rate, _clamp_unit(ports_per_minute / 8.0))
+    )
+
+    if unique_source_ips >= 5:
+        source_ip_factor = 1.0
+    elif unique_source_ips == 4:
+        source_ip_factor = 0.9
+    elif unique_source_ips == 3:
+        source_ip_factor = 0.75
+    elif unique_source_ips == 2:
+        source_ip_factor = 0.6
+    elif unique_source_ips == 1:
+        source_ip_factor = 0.25
+    else:
+        source_ip_factor = 0.0
+
+    if unique_scan_targets == 1:
+        target_focus_factor = 1.0
+    elif unique_scan_targets == 2:
+        target_focus_factor = 0.7
+    elif 2 < unique_scan_targets <= 4:
+        target_focus_factor = 0.4
+    else:
+        target_focus_factor = 0.0
+
+    # نرفع الإشارة عندما تتوزع عملية المسح على أكثر من IP مع تنوع واضح بالمنافذ.
+    signal = (
+        0.45 * unique_ports_contacted
+        + 0.25 * source_ip_factor
+        + 0.20 * traffic_speed_factor
+        + 0.10 * target_focus_factor
+    )
+
+    if unique_source_ips < 2:
+        signal *= 0.6
+
+    return _clamp_unit(signal)
+
+
 def _compute_behavior_score(features: Mapping[str, float]) -> float:
     """
     Compute an aggregated behavior score from normalized features.
@@ -228,6 +357,7 @@ def _compute_behavior_score(features: Mapping[str, float]) -> float:
 
     # Recon / scanning behaviour.
     base += 20.0 * min(1.0, features.get("unique_ports_contacted", 0.0))
+    base += 25.0 * min(1.0, features.get("distributed_scan_signal", 0.0))
     base += 10.0 * min(1.0, features.get("sensitive_resource_access", 0.0))
 
     # Clamp to [0, 100]
@@ -261,12 +391,14 @@ def analyze_behavior(entity_data: Mapping[str, Any]) -> BehaviorProfile:
         - request_rate: requests per second, normalized to [0, 1]
         - failed_auth_count: number of failed logins in the window
         - total_auth_count: total login attempts in the window
-        - unique_ports: number of distinct destination ports contacted (normalized)
+        - unique_ports / unique_port_count: distinct destination ports contacted
         - sensitive_access_count: accesses to high‑value resources (normalized)
         - username / target_username: attacked username when known
         - source_ip / source_ips / unique_source_ips: attacking sources
         - unique_target_users / target_usernames: user focus in the attack window
         - failed_auth_window_seconds: time window used for failed login aggregation
+        - target_host / target_hosts / unique_scan_targets: scan destination scope
+        - scan_window_seconds: time window used for scan aggregation
 
     Returns
     -------
@@ -297,7 +429,13 @@ def analyze_behavior(entity_data: Mapping[str, Any]) -> BehaviorProfile:
     )
 
     # Reconnaissance / scanning features.
-    unique_ports_contacted = max(0.0, _safe_get_number(entity_data, "unique_ports"))
+    unique_ports_contacted = _resolve_unique_ports_contacted(entity_data)
+    distributed_scan_signal = _compute_distributed_scan_signal(
+        entity_data,
+        connection_rate,
+        request_rate,
+        unique_ports_contacted,
+    )
     sensitive_resource_access = max(
         0.0, _safe_get_number(entity_data, "sensitive_access_count")
     )
@@ -308,6 +446,7 @@ def analyze_behavior(entity_data: Mapping[str, Any]) -> BehaviorProfile:
         "failed_auth_ratio": failed_auth_ratio,
         "targeted_brute_force_signal": targeted_brute_force_signal,
         "unique_ports_contacted": unique_ports_contacted,
+        "distributed_scan_signal": distributed_scan_signal,
         "sensitive_resource_access": sensitive_resource_access,
     }
 
