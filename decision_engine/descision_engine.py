@@ -8,7 +8,7 @@ to determine the appropriate security response.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Callable, Dict, List, Mapping, Optional
 
 
@@ -69,6 +69,23 @@ class DecisionRule:
     severity: str
     priority: int
     description: str
+
+
+@dataclass(frozen=True)
+class PolicyEvaluation:
+    """Structured output describing which policy rules matched."""
+
+    selected_rule_id: str
+    selected_action: str
+    selected_severity: str
+    selected_priority: int
+    selected_rule_description: str
+    matched_rules: List[str]
+    matched_actions: List[str]
+    context_snapshot: Dict[str, Any]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
 
 
 def _safe_get_number(data: Mapping[str, Any], key: str, default: float = 0.0) -> float:
@@ -212,6 +229,7 @@ DECISION_RULES: List[DecisionRule] = [
         description="No stronger policy matched, continue monitoring.",
     ),
 ]
+RULES_BY_ID = {rule.rule_id: rule for rule in DECISION_RULES}
 
 
 def _matches_correlated_multi_stage_isolate(context: DecisionContext) -> bool:
@@ -266,14 +284,59 @@ RULE_PREDICATES: Dict[str, Callable[[DecisionContext], bool]] = {
 }
 
 
-def _evaluate_decision_rules(context: DecisionContext) -> DecisionRule:
-    """Return the highest-priority matched decision rule."""
-    matched_rules = [
+def _match_decision_rules(context: DecisionContext) -> List[DecisionRule]:
+    """Return all decision rules that match the current context."""
+    return [
         rule
         for rule in DECISION_RULES
         if RULE_PREDICATES[rule.rule_id](context)
     ]
+
+
+def _select_highest_priority_rule(matched_rules: List[DecisionRule]) -> DecisionRule:
+    """Select the strongest matched rule."""
     return max(matched_rules, key=lambda rule: rule.priority)
+
+
+def evaluate_policies(
+    behavior_profile: Mapping[str, Any],
+    attack_prediction: Mapping[str, Any],
+    trust_score: float,
+    correlation: Optional[Mapping[str, Any]] = None,
+    risk_score: float = 0.0,
+    risk_level: str = "low",
+) -> PolicyEvaluation:
+    """Evaluate the decision policies and return a structured trace."""
+    context = _build_context(
+        behavior_profile,
+        attack_prediction,
+        trust_score,
+        correlation=correlation,
+        risk_score=risk_score,
+        risk_level=risk_level,
+    )
+    matched_rules = _match_decision_rules(context)
+    selected_rule = _select_highest_priority_rule(matched_rules)
+
+    # نعيد أثر التقييم حتى يسهل تفسير القرار أو عرضه في الواجهة لاحقاً.
+    return PolicyEvaluation(
+        selected_rule_id=selected_rule.rule_id,
+        selected_action=selected_rule.action,
+        selected_severity=selected_rule.severity,
+        selected_priority=selected_rule.priority,
+        selected_rule_description=selected_rule.description,
+        matched_rules=[rule.rule_id for rule in matched_rules],
+        matched_actions=[rule.action for rule in matched_rules],
+        context_snapshot={
+            "behavior_score": context.behavior_score,
+            "attack_stage": context.attack_stage,
+            "trust_score": context.trust_score,
+            "risk_score": context.risk_score,
+            "risk_level": context.risk_level,
+            "correlation_detected": context.correlation_detected,
+            "correlation_type": context.correlation_type,
+        },
+    )
 
 
 def _calculate_confidence(
@@ -424,7 +487,15 @@ def make_decision(
         risk_score=risk_score,
         risk_level=risk_level,
     )
-    selected_rule = _evaluate_decision_rules(context)
+    policy_evaluation = evaluate_policies(
+        behavior_profile,
+        attack_prediction,
+        trust_score,
+        correlation=correlation,
+        risk_score=risk_score,
+        risk_level=risk_level,
+    )
+    selected_rule = RULES_BY_ID[policy_evaluation.selected_rule_id]
     confidence = _calculate_confidence(context, ml_advisory)
     reasoning = _generate_reasoning(context, selected_rule)
 
@@ -445,12 +516,15 @@ def make_decision(
     result = decision.to_dict()
     if ml_advisory:
         result["ml_advisory"] = dict(ml_advisory)
+    result["policy_evaluation"] = policy_evaluation.to_dict()
     return result
 
 
 __all__ = [
     "DecisionContext",
     "DecisionRule",
+    "PolicyEvaluation",
     "SecurityDecision",
+    "evaluate_policies",
     "make_decision",
 ]
