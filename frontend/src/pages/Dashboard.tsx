@@ -186,7 +186,7 @@ export default function Dashboard() {
               <div className="cds-kpi-value text-uppercase">{String(socData.threat_level)}</div>
             </div>
           </div>
-          {socData.incident_stats && (
+          {Boolean(socData.incident_stats) && (
             <>
               {Object.entries((socData.incident_stats as Record<string, unknown>).by_status as Record<string, number> || {}).map(([k, v]) => (
                 <div key={k} className="col-md-2">

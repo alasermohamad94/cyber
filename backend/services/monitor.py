@@ -99,12 +99,21 @@ class WebServerMonitor:
             memory = psutil.virtual_memory()
             disk = psutil.disk_usage("/")
             network = psutil.net_io_counters()
-            network_io = {
-                "bytes_sent": network.bytes_sent,
-                "bytes_recv": network.bytes_recv,
-                "packets_sent": network.packets_sent,
-                "packets_recv": network.packets_recv,
-            }
+            if network is None:
+                # Some CI/container environments can return None; keep metrics API stable.
+                network_io = {
+                    "bytes_sent": 0,
+                    "bytes_recv": 0,
+                    "packets_sent": 0,
+                    "packets_recv": 0,
+                }
+            else:
+                network_io = {
+                    "bytes_sent": network.bytes_sent,
+                    "bytes_recv": network.bytes_recv,
+                    "packets_sent": network.packets_sent,
+                    "packets_recv": network.packets_recv,
+                }
             try:
                 connections = len(psutil.net_connections())
             except (psutil.Error, OSError):

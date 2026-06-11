@@ -105,6 +105,16 @@ export const api = {
   listQuarantine: () => request<{ quarantine: Record<string, unknown>[] }>('/api/quarantine'),
   releaseQuarantine: (id: string) => request(`/api/quarantine/${id}/release`, { method: 'POST' }),
   listPendingApprovals: () => request<{ approvals: Record<string, unknown>[] }>('/api/approvals/pending'),
+  approvePendingAction: (approval_id: string, is_second = false) =>
+    request('/api/approvals/approve', {
+      method: 'POST',
+      body: JSON.stringify({ approval_id, is_second }),
+    }),
+  requestSensitiveApproval: (body: Record<string, unknown>) =>
+    request('/api/approvals/request', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   listSessions: () => request<{ sessions: Record<string, unknown>[] }>('/api/sessions'),
   revokeSession: (sessionId: string) =>
     request(`/api/sessions/${sessionId}/revoke`, { method: 'POST' }),

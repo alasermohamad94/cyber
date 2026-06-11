@@ -14,7 +14,7 @@ export default function ReplayViewer() {
 
   const load = () => {
     if (!entity.trim()) return;
-    api.replayForensics({ entity_id: entity }).then(setData).catch(console.error);
+    api.replayForensics({ entity_id: entity }).then((d) => setData(d as Record<string, unknown>)).catch(console.error);
     setIndex(0);
   };
 

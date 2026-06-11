@@ -25,13 +25,13 @@ export default function Investigation() {
     e.preventDefault();
     if (!hasPermission('cases:write')) return;
     const c = await api.createCase({ title: newTitle, description: `تحقيق في ${entityParam}`, incident_ids: [] });
-    setSelected(c);
+    setSelected(c as Record<string, unknown>);
     load();
   };
 
   const openCase = async (id: string) => {
     const c = await api.getCase(id);
-    setSelected(c);
+    setSelected(c as Record<string, unknown>);
   };
 
   const addNote = async () => {
@@ -87,7 +87,7 @@ export default function Investigation() {
                       {graphNodes.map((n) => (
                         <span key={n.id} className={`badge ${n.type === 'ip' ? 'bg-danger' : 'bg-info'}`}>{n.label}</span>
                       ))}
-                      {graphNodes.length > 1 && graphNodes.slice(1).map((n, i) => (
+                      {graphNodes.length > 1 && graphNodes.slice(1).map((_, i) => (
                         <span key={`link-${i}`} className="text-white-50">↔</span>
                       ))}
                     </div>

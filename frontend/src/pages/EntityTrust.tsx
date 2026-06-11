@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { useAuth } from '../context/AuthContext';
 import { severityBadgeClass } from '../utils/cds';
 
 export default function EntityTrust() {
-  const { hasPermission } = useAuth();
   const [entities, setEntities] = useState<Record<string, unknown>[]>([]);
   const [selected, setSelected] = useState<Record<string, unknown> | null>(null);
 
